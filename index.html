@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+  <meta name="theme-color" content="#0d1117" />
+  <title>Riftforged — Loot Roguelite ARPG</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main id="app">
+    <canvas id="game" aria-label="Riftforged game canvas"></canvas>
+
+    <section id="hud" class="hud">
+      <div class="topbar">
+        <div class="brand">RIFTFORGED <span>Prototype 0.1</span></div>
+        <div class="zone" id="zoneLabel">裂隙 I · 第 1 波</div>
+      </div>
+
+      <div class="stats-panel glass">
+        <div class="bar hp"><i id="hpBar"></i><b id="hpText">100 / 100</b></div>
+        <div class="bar xp"><i id="xpBar"></i><b id="xpText">Lv.1</b></div>
+        <div class="chips"><span id="dpsChip">傷害 18</span><span id="critChip">暴擊 5%</span><span id="emberChip">餘燼 0</span></div>
+      </div>
+
+      <div id="lootFeed" class="loot-feed"></div>
+      <button id="inventoryButton" class="inventory-button">背包 <kbd>I</kbd></button>
+    </section>
+
+    <section id="choiceOverlay" class="overlay hidden" aria-live="polite">
+      <div class="choice-box glass">
+        <p class="eyebrow" id="choiceEyebrow">裂隙祝福</p>
+        <h2 id="choiceTitle">選擇一項強化</h2>
+        <div id="choiceCards" class="choice-cards"></div>
+      </div>
+    </section>
+
+    <section id="inventoryOverlay" class="overlay hidden">
+      <div class="inventory glass">
+        <div class="inventory-head"><div><p class="eyebrow">獵獲紀錄</p><h2>裝備與詞綴</h2></div><button id="closeInventory">✕</button></div>
+        <div id="equipmentGrid" class="equipment-grid"></div>
+        <div class="inventory-tip">高稀有度不一定更強。詞綴能改變 Build 方向，之後版本會加入裝備比較與拆解。</div>
+      </div>
+    </section>
+
+    <section id="deathOverlay" class="overlay hidden">
+      <div class="death glass">
+        <p class="eyebrow">裂隙吞噬了你</p>
+        <h1>遠征結束</h1>
+        <p id="deathStats"></p>
+        <button id="restartButton" class="primary">帶著餘燼再次進入</button>
+      </div>
+    </section>
+
+    <section id="mobileControls" class="mobile-controls">
+      <div id="joystick" class="joystick"><div id="joystickKnob"></div></div>
+      <div class="mobile-actions">
+        <button id="dashButton" class="action dash">閃</button>
+        <button id="attackButton" class="action attack">擊</button>
+      </div>
+    </section>
+
+    <div id="startHint" class="start-hint glass">WASD / 左搖桿移動 · 滑鼠左鍵 / 攻擊鍵攻擊 · Shift / 閃避鍵衝刺</div>
+  </main>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
