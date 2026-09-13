@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "check": "node --check src/main.js && node --check src/game/Game.js && node --check src/game/IsoMode.js && node --check src/game/IsoMode2.js && node --check src/game/UprightSprites.js && node --check src/game/input/InputManager.js && node --check src/game/data/gems.js && node --check src/game/ui/GemUI.js && node --check src/game/systems/LootSystem.js && node --check src/game/systems/GemSystem.js && node --check tests/browser-smoke.mjs",
+    "check": "node --check src/main.js && node --check src/game/Game.js && node --check src/game/IsoMode.js && node --check src/game/IsoMode2.js && node --check src/game/UprightSprites.js && node --check src/game/input/InputManager.js && node --check src/game/data/gems.js && node --check src/game/ui/GemUI.js && node --check src/game/systems/SocketSystem.js && node --check src/game/systems/LootSystem.js && node --check src/game/systems/GemSystem.js && node --check tests/browser-smoke.mjs",
     "smoke:browser": "node tests/browser-smoke.mjs",
     "serve": "python3 -m http.server 5173"
   }
