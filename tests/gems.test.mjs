@@ -1,0 +1,8 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { buildGemLoadout, createGemState, installGem } from '../src/game/systems/GemSystem.js';
+
+test('linked support modifies the selected active gem',()=>{const state=createGemState({starter:false});state.stash.push('crimson_bolt','verdant_chain');installGem(state,'s0','crimson_bolt');installGem(state,'s1','verdant_chain');const loadout=buildGemLoadout(state);assert.equal(loadout.active.id,'crimson_bolt');assert.equal(loadout.supports.length,1);assert.equal(loadout.profile.extraChain,1);});
+test('unlinked support does not modify active gem',()=>{const state=createGemState({starter:false});state.stash.push('crimson_bolt','verdant_chain');installGem(state,'s0','crimson_bolt');installGem(state,'s4','verdant_chain');const loadout=buildGemLoadout(state);assert.equal(loadout.supports.length,0);assert.equal(loadout.profile.extraChain,0);});
+test('aura works without being linked',()=>{const state=createGemState({starter:false});state.stash.push('crimson_bolt','azure_aura');installGem(state,'s0','crimson_bolt');installGem(state,'s7','azure_aura');const loadout=buildGemLoadout(state);assert.equal(loadout.auras.length,1);assert.equal(loadout.profile.critBonus,.06);});
+test('duplicate gems in stash install from the tapped stash entry',()=>{const state=createGemState({starter:false});state.stash.push('crimson_bolt','crimson_bolt');installGem(state,'s0','crimson_bolt',0);assert.deepEqual(state.stash,['crimson_bolt']);installGem(state,'s1','crimson_bolt',0);assert.equal(state.sockets[0].gemId,'crimson_bolt');assert.equal(state.sockets[1].gemId,'crimson_bolt');assert.equal(state.stash.length,0);});
