@@ -74,7 +74,7 @@ func _build_world() -> void:
         Vector3(-7.0, 0.6, 5.0), Vector3(7.0, 0.6, -5.5),
         Vector3(0.0, 0.6, -8.0), Vector3(-1.0, 0.6, 8.0)
     ]
-    for i in prop_positions.size():
+    for i in range(prop_positions.size()):
         var prop := MeshInstance3D.new()
         var prop_mesh := BoxMesh.new()
         prop_mesh.size = Vector3(1.25, 1.2 + float(i % 2) * 0.5, 1.25)
@@ -229,7 +229,7 @@ func _round_style(color: Color, radius: int) -> StyleBoxFlat:
 func _layout_ui() -> void:
     if not is_instance_valid(joystick_back):
         return
-    var viewport_size := get_viewport().get_visible_rect().size
+    var viewport_size: Vector2 = get_viewport().get_visible_rect().size
     joystick_back.size = Vector2(136.0, 136.0)
     joystick_back.position = Vector2(22.0, viewport_size.y - 170.0)
     joystick_knob.size = Vector2(56.0, 56.0)
@@ -243,8 +243,8 @@ func _layout_ui() -> void:
     hint_label.position = Vector2(12.0, 72.0)
     hint_label.size = Vector2(viewport_size.x - 24.0, 42.0)
 
-    var aspect := viewport_size.x / max(viewport_size.y, 1.0)
-    var orientation := "直立" if viewport_size.y >= viewport_size.x else "橫向"
+    var aspect: float = viewport_size.x / maxf(viewport_size.y, 1.0)
+    var orientation: String = "直立" if viewport_size.y >= viewport_size.x else "橫向"
     status_label.text = "Godot 4.7.2 · 2.5D 原型 · %s · %.2f aspect\nCamera KEEP_WIDTH / Orthographic" % [orientation, aspect]
 
 func _physics_process(delta: float) -> void:
@@ -307,12 +307,13 @@ func _fire() -> void:
 
 func _update_projectiles(delta: float) -> void:
     for i in range(projectiles.size() - 1, -1, -1):
-        var entry := projectiles[i]
+        var entry: Dictionary = projectiles[i]
         var node: MeshInstance3D = entry["node"]
         if not is_instance_valid(node):
             projectiles.remove_at(i)
             continue
-        node.position += entry["velocity"] * delta
+        var velocity: Vector3 = entry["velocity"]
+        node.position += velocity * delta
         entry["life"] = float(entry["life"]) - delta
         projectiles[i] = entry
         if is_instance_valid(enemy) and node.global_position.distance_to(enemy.global_position + Vector3(0.0, 0.75, 0.0)) < 0.72:
@@ -329,7 +330,7 @@ func _damage_enemy(amount: float) -> void:
     enemy_hp -= amount
     var label := enemy.get_node_or_null("EnemyLabel") as Label3D
     if label:
-        label.text = "裂隙獸 %d" % max(0, int(ceil(enemy_hp)))
+        label.text = "裂隙獸 %d" % maxi(0, int(ceil(enemy_hp)))
     if enemy_hp <= 0.0:
         enemy.queue_free()
         enemy = null
