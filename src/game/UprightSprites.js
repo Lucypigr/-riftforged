@@ -1,13 +1,9 @@
 import { loadSpriteAssets, actorSpriteKey } from './SpriteAssets.js';
+import { cameraZoomForView } from './IsoMode2.js';
 
 const TAU=Math.PI*2;
 const ISO_X=.72, ISO_Y=.36;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-
-export function actorVisualScale(view,kind){
-  const portrait=view?.h>view?.w*1.08;
-  return portrait&&kind==='player'?.78:1;
-}
 
 function project(game,x,y){
   const dx=x-game.player.x,dy=y-game.player.y;
@@ -16,26 +12,24 @@ function project(game,x,y){
 function shadow(c,x,y,rx,ry,a=.45){c.fillStyle=`rgba(0,0,0,${a})`;c.beginPath();c.ellipse(x,y,rx,ry,0,0,TAU);c.fill();}
 function feet(c,x,y,scale=1){c.fillStyle='#17191c';c.beginPath();c.ellipse(x-8*scale,y-2,9*scale,4*scale,-.15,0,TAU);c.ellipse(x+8*scale,y-2,9*scale,4*scale,.15,0,TAU);c.fill();}
 
-function drawImageActor(c,img,x,y,kind,actor,time,visualScale=1){
+function drawImageActor(c,img,x,y,kind,actor,time){
   const boss=kind==='enemy'&&actor.boss;
   const brute=kind==='enemy'&&actor.type==='brute';
   const skitter=kind==='enemy'&&actor.type==='skitter';
-  const baseH=boss?190:brute?154:skitter?112:kind==='player'?156:138;
-  const h=baseH*visualScale;
+  const h=boss?190:brute?154:skitter?112:kind==='player'?156:138;
   const iw=img.naturalWidth||img.width||1,ih=img.naturalHeight||img.height||1;
   const ratio=iw/Math.max(1,ih);
-  const maxW=(boss?150:kind==='player'?132:116)*visualScale;
-  const w=Math.min(h*ratio,maxW);
-  shadow(c,x,y+2,w*.28,8*visualScale,boss?.58:.48);
-  const bob=kind==='player'?Math.sin(time*5)*1.2*visualScale:0;
+  const w=Math.min(h*ratio,boss?150:kind==='player'?132:116);
+  shadow(c,x,y+2,w*.28,8,boss?.58:.48);
+  const bob=kind==='player'?Math.sin(time*5)*1.2:0;
   c.save();
   if(kind==='enemy'&&actor.hitFlash>0){c.globalAlpha=.62;c.filter='brightness(1.8) saturate(.5)';}
   c.drawImage(img,x-w/2,y-h+bob,w,h);
   c.restore();
 }
 
-function hero(c,x,y,p,time,visualScale=1){
-  c.save();c.translate(Math.round(x),Math.round(y));c.scale(visualScale,visualScale);
+function hero(c,x,y,p,time){
+  c.save();c.translate(Math.round(x),Math.round(y));
   const bob=Math.sin(time*5)*1.2;
   shadow(c,0,2,31,9,.52);feet(c,0,0,1);c.translate(0,bob);
   c.fillStyle='#252a31';c.fillRect(-13,-34,10,31);c.fillRect(4,-34,10,31);
@@ -65,16 +59,18 @@ export function enableUprightSprites(game){
   const sprites=loadSpriteAssets();
   const baseDraw=game.draw.bind(game);
   game.draw=function(){
-    baseDraw();const c=this.ctx;
+    baseDraw();const c=this.ctx,zoom=cameraZoomForView(this.view),w=this.view.w,h=this.view.h;
+    c.save();c.translate(w/2,h/2);c.scale(zoom,zoom);c.translate(-w/2,-h/2);
     const actors=[...this.enemies.map(e=>({kind:'enemy',o:e})),{kind:'player',o:this.player}].sort((a,b)=>(a.o.x+a.o.y)-(b.o.x+b.o.y));
     for(const a of actors){
-      const s=project(this,a.o.x,a.o.y),visualScale=actorVisualScale(this.view,a.kind);
-      c.save();c.globalAlpha=.94;c.fillStyle='#222322';c.beginPath();c.ellipse(s.x,s.y-28*visualScale,(a.kind==='player'?34:Math.max(28,a.o.radius*1.25))*visualScale,(a.kind==='player'?34:Math.max(30,a.o.radius*1.3))*visualScale,0,0,TAU);c.fill();c.restore();
+      const s=project(this,a.o.x,a.o.y);
+      c.save();c.globalAlpha=.94;c.fillStyle='#222322';c.beginPath();c.ellipse(s.x,s.y-28,a.kind==='player'?34:Math.max(28,a.o.radius*1.25),a.kind==='player'?34:Math.max(30,a.o.radius*1.3),0,0,TAU);c.fill();c.restore();
       const key=actorSpriteKey(a.o,a.kind);
       const img=sprites.processed[key]||sprites.images[key];
-      if(sprites.ready[key])drawImageActor(c,img,s.x,s.y,a.kind,a.o,this.time,visualScale);
-      else if(a.kind==='player')hero(c,s.x,s.y,this.player,this.time,visualScale);else fallbackEnemy(c,s.x,s.y,a.o);
+      if(sprites.ready[key])drawImageActor(c,img,s.x,s.y,a.kind,a.o,this.time);
+      else if(a.kind==='player')hero(c,s.x,s.y,this.player,this.time);else fallbackEnemy(c,s.x,s.y,a.o);
       if(a.kind==='enemy')healthBar(c,s.x,s.y,a.o);
     }
+    c.restore();
   };
 }
