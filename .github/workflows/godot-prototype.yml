@@ -26,8 +26,10 @@ jobs:
           use-dotnet: false
           include-templates: true
 
-      - name: Verify Godot
-        run: godot --version
+      - name: Verify Godot and templates
+        run: |
+          godot --version
+          find "$HOME/.local/share/godot/export_templates" -maxdepth 2 -type f -print | head -40 || true
 
       - name: Import project
         run: godot --headless --path godot --import --quit
@@ -37,12 +39,13 @@ jobs:
 
       - name: Export Web build
         run: |
-          mkdir -p godot/build/web
-          godot --headless --path godot --export-release "Web" "$GITHUB_WORKSPACE/godot/build/web/index.html"
+          rm -rf "$GITHUB_WORKSPACE/godot-web-build"
+          mkdir -p "$GITHUB_WORKSPACE/godot-web-build"
+          godot --headless --verbose --path godot --export-release "Web" "$GITHUB_WORKSPACE/godot-web-build/index.html"
 
       - name: Verify Web export files
         run: |
-          test -f godot/build/web/index.html
-          test -n "$(find godot/build/web -maxdepth 1 -name '*.wasm' -print -quit)"
-          test -n "$(find godot/build/web -maxdepth 1 -name '*.pck' -print -quit)"
-          ls -lh godot/build/web
+          test -f godot-web-build/index.html
+          test -n "$(find godot-web-build -maxdepth 1 -name '*.wasm' -print -quit)"
+          test -n "$(find godot-web-build -maxdepth 1 -name '*.pck' -print -quit)"
+          ls -lh godot-web-build
