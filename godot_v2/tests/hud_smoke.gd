@@ -1,5 +1,7 @@
 extends SceneTree
 
+# Regression guard for the desktop ARPG HUD: colored resource orbs and the
+# foreground skill row must both survive the Web/Compatibility path.
 func _fail(message: String) -> void:
     push_error(message)
     quit(1)
