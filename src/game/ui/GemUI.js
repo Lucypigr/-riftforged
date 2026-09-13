@@ -7,7 +7,7 @@ export function mountGemUI(game,handlers){
   if(document.querySelector('#gemOverlay'))return;
   const css=document.createElement('link');css.rel='stylesheet';css.href='./src/game/ui/gems.css';css.id='gem-ui-css';document.head.appendChild(css);
   const button=document.createElement('button');button.id='gemButton';button.className='gem-button';button.textContent='寶石';document.body.appendChild(button);
-  const overlay=document.createElement('section');overlay.id='gemOverlay';overlay.className='overlay hidden';overlay.innerHTML=`<div class="gem-panel"><div class="gem-head"><div><p class="eyebrow">RIFT SOCKET MATRIX</p><h2>裂隙寶石</h2></div><button id="closeGemOverlay">✕</button></div><p class="gem-help">點背包寶石，再點孔洞即可安裝。只有與目前主動寶石同一條連線的輔助寶石會生效；光環不需連線。再次點目前主動寶石可卸下。</p><div class="gem-layout"><div class="socket-box"><div class="socket-title"><span>自由孔洞</span><span>觸控可用</span></div><div id="socketRows"></div><div id="gemStatus" class="gem-status"></div></div><div class="gem-stash"><div class="socket-title"><span>寶石背包</span><span id="gemCount">0</span></div><div id="gemStashGrid" class="gem-stash-grid"></div></div></div></div>`;document.body.appendChild(overlay);
+  const overlay=document.createElement('section');overlay.id='gemOverlay';overlay.className='overlay hidden';overlay.innerHTML=`<div class="gem-panel"><div class="gem-head"><div><p class="eyebrow">RIFT SOCKET MATRIX</p><h2>裂隙寶石</h2></div><button id="closeGemOverlay">✕</button></div><p class="gem-help">孔洞與連線現在由武器／護甲決定。切換孔洞裝備會把已安裝寶石安全退回寶石背包；點背包寶石，再點孔洞即可安裝。只有同一連線組的相容輔助寶石會強化主動技能；光環不需連線。</p><div class="socket-source"><div><span class="eyebrow">目前孔洞裝備</span><strong id="socketSourceName">裂隙基座</strong></div><span id="socketSourceLayout">4連</span></div><div class="socket-gear"><div class="socket-title"><span>可用孔洞裝備</span><span>武器／護甲</span></div><div id="socketGearGrid" class="socket-gear-grid"></div></div><div class="gem-layout"><div class="socket-box"><div class="socket-title"><span>裝備孔洞</span><span>觸控可用</span></div><div id="socketRows"></div><div id="gemStatus" class="gem-status"></div></div><div class="gem-stash"><div class="socket-title"><span>寶石背包</span><span id="gemCount">0</span></div><div id="gemStashGrid" class="gem-stash-grid"></div></div></div></div>`;document.body.appendChild(overlay);
   button.onclick=()=>toggleGemOverlay(game,true,handlers);overlay.querySelector('#closeGemOverlay').onclick=()=>toggleGemOverlay(game,false,handlers);
   renderGemUI(game,handlers);updateSkillbar(game,handlers.buildLoadout);
 }
@@ -18,10 +18,21 @@ function toggleGemOverlay(game,open,handlers){
   else{overlay.classList.add('hidden');if(game.ui.choice.classList.contains('hidden')&&game.ui.death.classList.contains('hidden')&&game.ui.inv.classList.contains('hidden'))game.paused=false;}
 }
 
+function renderSocketGear(game,handlers){
+  const grid=document.querySelector('#socketGearGrid'),name=document.querySelector('#socketSourceName'),layout=document.querySelector('#socketSourceLayout');if(!grid)return;
+  name.textContent=game.gemState.socketSourceName||'裂隙基座';layout.textContent=handlers.describeLayout(game.gemState.socketLayout);
+  const items=game.player.inventory.filter(item=>item.socketLayout?.length);
+  grid.innerHTML='';
+  if(!items.length){grid.innerHTML='<div class="socket-gear-empty">尚未取得有孔洞的武器或護甲。起始裂隙基座提供 4 連。</div>';return;}
+  for(const item of items){const b=document.createElement('button');b.className='socket-gear-card'+(game.gemState.socketSourceId===item.id?' equipped':'');b.style.setProperty('--rarity',item.color);b.innerHTML=`<strong>${item.name}</strong><span>${handlers.describeLayout(item.socketLayout)}</span><small>${game.gemState.socketSourceId===item.id?'目前使用':'點擊套用孔洞'}</small>`;b.onclick=()=>{handlers.equipFrame(game.gemState,item);renderGemUI(game,handlers);updateSkillbar(game,handlers.buildLoadout);};grid.appendChild(b);}
+}
+
 export function renderGemUI(game,handlers){
   const rows=document.querySelector('#socketRows'),stash=document.querySelector('#gemStashGrid'),count=document.querySelector('#gemCount'),status=document.querySelector('#gemStatus');if(!rows||!stash)return;
+  renderSocketGear(game,handlers);
   rows.innerHTML='';
-  for(const group of[0,1,null]){
+  const groups=[];for(const socket of game.gemState.sockets)if(!groups.includes(socket.linkGroup))groups.push(socket.linkGroup);
+  for(const group of groups){
     const sockets=game.gemState.sockets.filter(s=>s.linkGroup===group);if(!sockets.length)continue;
     const row=document.createElement('div');row.className='socket-row';
     sockets.forEach((socket,i)=>{if(i&&group!=null){const l=document.createElement('span');l.className='socket-link';row.appendChild(l);}const gem=GEM_BY_ID[socket.gemId];const b=document.createElement('button');b.className='gem-socket'+(game.gemState.activeSocketId===socket.id?' active-socket':'');b.title=gem?.name||'空孔洞';
