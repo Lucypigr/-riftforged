@@ -20,10 +20,22 @@ Riftforged uses an original linked-gem system inspired by the general build-craf
 - Gem drops glow on the battlefield and are collected by moving near them.
 - Desktop and touch use the same flow: select a gem, then select a socket.
 
-Current prototype gems cover projectile actives plus damage, chain, multi-projectile, pierce, speed and aura modifiers. Chain is a real projectile redirect to a nearby enemy rather than only a numeric stat increase.
+The important rule is that supports should change behavior, not merely add damage. Current implementations include:
+- chain: redirects a projectile to another nearby enemy;
+- multi-projectile: changes the number and spread of projectiles;
+- pierce: lets a projectile continue through targets;
+- splash: creates real area damage around the impact target;
+- fork: destroys the original projectile after impact and creates two weaker child projectiles;
+- reach: changes projectile speed and lifetime, increasing practical range;
+- damage/speed trade-offs and independent aura effects.
+
+Multiple active gems can occupy the matrix; tapping an installed active gem selects which attack is currently used, and the linked supports in its group are recalculated for that active gem.
 
 ## Loot model
 Base item + rarity + affixes. Initial prototype has Common/Magic/Rare/Legendary. Future versions add item level, affix tiers, build-defining legendary effects, crafting, socket expansion and loot filters.
+
+## Next socket progression step
+The current free matrix is intentionally a stable prototype layer. The next equipment pass will move socket quantity/link topology into dropped build equipment so finding gear can change both raw stats and which gem combinations are possible. Gems already installed in a topology that becomes unavailable must safely return to the gem stash rather than disappear.
 
 ## Roguelite layer
 Level-up blessings remain run-only secondary bonuses. Gems are the main combat-shaping layer. Ember is persistent. Future meta progression should unlock options rather than simply grant large permanent damage bonuses.
