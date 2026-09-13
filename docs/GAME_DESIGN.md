@@ -12,10 +12,13 @@ Enter Rift → clear combat wave → collect equipment/gems from the ground → 
 
 ## Gem model
 Riftforged uses an original linked-gem system inspired by the general build-crafting principle of socket-link ARPGs, without copying proprietary names, assets or exact content.
-- Red/green/blue gems use a free socket matrix.
+- Red/green/blue gems are installed into sockets supplied by weapons and armor.
+- The run begins with a temporary four-link Rift Base so the gem system is usable before socket gear drops.
+- Dropped weapons/armor roll 2–6 sockets depending on rarity plus a link topology such as 4-link, 3+1, 2+2, 5+1 or 3+3.
 - Active gems define the attack being used.
 - Support gems affect the selected active gem only when they share its linked group and tags are compatible.
 - Aura gems consume sockets but do not require links.
+- Swapping the socket-providing item safely returns installed gems to the gem stash, then applies the new socket/link topology.
 - Normal enemies have a 5% gem-drop chance; bosses have a substantially higher chance.
 - Gem drops glow on the battlefield and are collected by moving near them.
 - Desktop and touch use the same flow: select a gem, then select a socket.
@@ -29,13 +32,10 @@ The important rule is that supports should change behavior, not merely add damag
 - reach: changes projectile speed and lifetime, increasing practical range;
 - damage/speed trade-offs and independent aura effects.
 
-Multiple active gems can occupy the matrix; tapping an installed active gem selects which attack is currently used, and the linked supports in its group are recalculated for that active gem.
+Multiple active gems can occupy a socket item; tapping an installed active gem selects which attack is currently used, and the linked supports in its group are recalculated for that active gem.
 
 ## Loot model
-Base item + rarity + affixes. Initial prototype has Common/Magic/Rare/Legendary. Future versions add item level, affix tiers, build-defining legendary effects, crafting, socket expansion and loot filters.
-
-## Next socket progression step
-The current free matrix is intentionally a stable prototype layer. The next equipment pass will move socket quantity/link topology into dropped build equipment so finding gear can change both raw stats and which gem combinations are possible. Gems already installed in a topology that becomes unavailable must safely return to the gem stash rather than disappear.
+Base item + rarity + affixes + optional socket topology. Common/Magic/Rare/Legendary remain the initial rarity bands. Weapons and armor can now matter even when raw stats are similar because socket count and links can enable different builds. Future versions add item level, affix tiers, build-defining legendary effects, crafting, socket rerolling/expansion and loot filters.
 
 ## Roguelite layer
-Level-up blessings remain run-only secondary bonuses. Gems are the main combat-shaping layer. Ember is persistent. Future meta progression should unlock options rather than simply grant large permanent damage bonuses.
+Level-up blessings remain run-only secondary bonuses. Gems and socket gear are the main combat-shaping layer. Ember is persistent. Future meta progression should unlock options rather than simply grant large permanent damage bonuses.
