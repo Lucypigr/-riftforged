@@ -47,6 +47,15 @@ func _run() -> void:
             _fail("Missing required runtime node: %s" % path)
             return
 
+    var perf: Dictionary = scene.call("debug_perf_pass2")
+    if int(perf.get("ai_phases", 0)) != 2 or int(perf.get("loot_cap", 0)) != 24:
+        _fail("Second performance layer is not active")
+        return
+    var pool: Dictionary = perf.get("pool", {})
+    if int(pool.get("player_projectiles", 0)) < 10 or int(pool.get("enemy_projectiles", 0)) < 10 or int(pool.get("flashes", 0)) < 14:
+        _fail("Combat effect pools were not prewarmed")
+        return
+
     var player := scene.get_node("Player")
     var camera := player.get_node_or_null("Camera3D") as Camera3D
     if camera == null or camera.projection != Camera3D.PROJECTION_ORTHOGONAL or camera.keep_aspect != Camera3D.KEEP_WIDTH:
@@ -99,7 +108,7 @@ func _run() -> void:
     scene.call("_attack")
     await process_frame
     if int(scene.call("debug_projectile_count")) < 1:
-        _fail("Mobile attack did not spawn a visible projectile")
+        _fail("Mobile attack did not activate a pooled projectile")
         return
     await create_timer(0.36).timeout
     await process_frame
@@ -121,7 +130,7 @@ func _run() -> void:
     release_event.position = mouse_event.position
     scene.call("_unhandled_input", release_event)
     if int(scene.call("debug_projectile_count")) < 1:
-        _fail("Desktop left click did not spawn a projectile")
+        _fail("Desktop left click did not activate a pooled projectile")
         return
     await create_timer(0.36).timeout
     await process_frame
@@ -139,5 +148,5 @@ func _run() -> void:
         _fail("Dynamic weighted loot/affix record is incomplete")
         return
 
-    print("RIFTFORGED_V2_SMOKE_OK data-driven-archetypes/skills/hierarchical-loot/mobile+desktop ready")
+    print("RIFTFORGED_V2_SMOKE_OK perf2/pools/staggered-ai/hierarchical-loot/mobile+desktop ready")
     quit(0)
