@@ -1,0 +1,50 @@
+import { GEM_BY_ID, rollGem } from '../data/gems.js';
+import { CONFIG } from '../config.js';
+import { STARTER_SOCKET_LAYOUT, createSocketsFromLayout, describeSocketLayout } from './SocketSystem.js';
+import { drawGemVisuals, mountGemUI, renderGemUI, toastGem, updateSkillbar } from '../ui/GemUI.js';
+
+const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+export const DEFAULT_SOCKETS=createSocketsFromLayout(STARTER_SOCKET_LAYOUT);
+
+export function createGemState({starter=true,layout=STARTER_SOCKET_LAYOUT}={}){
+  const sockets=createSocketsFromLayout(layout),state={sockets,stash:[],activeSocketId:null,selectedGemId:null,selectedStashIndex:null,socketLayout:[...layout],socketSourceId:'starter',socketSourceName:'裂隙基座'};
+  if(starter){sockets[0].gemId='crimson_bolt';state.activeSocketId='s0';state.stash.push('verdant_chain','crimson_aura');}
+  return state;
+}
+export function installGem(state,socketId,gemId,stashIndex=null){if(!GEM_BY_ID[gemId])return false;const socket=state.sockets.find(s=>s.id===socketId);if(!socket)return false;const fromStash=Number.isInteger(stashIndex)&&stashIndex>=0&&state.stash[stashIndex]===gemId,source=fromStash?null:state.sockets.find(s=>s.gemId===gemId);if(fromStash)state.stash.splice(stashIndex,1);else if(source)source.gemId=null;else{const i=state.stash.indexOf(gemId);if(i>=0)state.stash.splice(i,1);}if(socket.gemId)state.stash.push(socket.gemId);socket.gemId=gemId;if(GEM_BY_ID[gemId].kind==='active')state.activeSocketId=socket.id;return true;}
+export function removeGem(state,socketId){const socket=state.sockets.find(s=>s.id===socketId);if(!socket?.gemId)return false;state.stash.push(socket.gemId);socket.gemId=null;if(state.activeSocketId===socketId)state.activeSocketId=state.sockets.find(s=>GEM_BY_ID[s.gemId]?.kind==='active')?.id??null;return true;}
+export function equipSocketItem(state,item){
+  if(!item?.socketLayout?.length)return false;
+  for(const socket of state.sockets)if(socket.gemId)state.stash.push(socket.gemId);
+  state.sockets=createSocketsFromLayout(item.socketLayout);
+  state.socketLayout=[...item.socketLayout];
+  state.socketSourceId=item.id;
+  state.socketSourceName=item.name;
+  state.activeSocketId=null;
+  state.selectedGemId=null;
+  state.selectedStashIndex=null;
+  return true;
+}
+
+function applyEffect(p,e={}){if(e.damageMultiplier)p.damageMultiplier*=e.damageMultiplier;if(e.attackRateMultiplier)p.attackRateMultiplier*=e.attackRateMultiplier;if(e.projectileSpeedMultiplier)p.projectileSpeedMultiplier*=e.projectileSpeedMultiplier;if(e.projectileLifetimeMultiplier)p.projectileLifetimeMultiplier*=e.projectileLifetimeMultiplier;p.extraProjectiles+=e.extraProjectiles||0;p.extraPierce+=e.extraPierce||0;p.extraChain+=e.extraChain||0;p.forks+=e.forks||0;if(e.forkDamageMultiplier)p.forkDamageMultiplier*=e.forkDamageMultiplier;if(e.splashRadius)p.splashRadius=Math.max(p.splashRadius,e.splashRadius);if(e.splashDamageMultiplier)p.splashDamageMultiplier=Math.max(p.splashDamageMultiplier,e.splashDamageMultiplier);}
+export function buildGemLoadout(state){const activeSocket=state.sockets.find(s=>s.id===state.activeSocketId&&GEM_BY_ID[s.gemId]?.kind==='active')||state.sockets.find(s=>GEM_BY_ID[s.gemId]?.kind==='active'),active=activeSocket?GEM_BY_ID[activeSocket.gemId]:null,profile={damageMultiplier:1,attackRateMultiplier:1,projectileSpeedMultiplier:1,projectileLifetimeMultiplier:1,extraProjectiles:0,extraPierce:0,extraChain:0,forks:0,forkDamageMultiplier:1,splashRadius:0,splashDamageMultiplier:0,critBonus:0,regenMaxHpPerSecond:0,projectileColor:'#f5dfa2'};if(active?.active){applyEffect(profile,active.active);if(active.active.projectileColor)profile.projectileColor=active.active.projectileColor;}const supports=[];if(activeSocket?.linkGroup!=null)for(const socket of state.sockets){if(socket.id===activeSocket.id||socket.linkGroup!==activeSocket.linkGroup)continue;const gem=GEM_BY_ID[socket.gemId];if(!gem||gem.kind!=='support'||(gem.tags?.length&&!gem.tags.some(tag=>active?.tags?.includes(tag))))continue;supports.push(gem);applyEffect(profile,gem.support);}const auras=[];for(const socket of state.sockets){const gem=GEM_BY_ID[socket.gemId];if(gem?.kind!=='aura')continue;auras.push(gem);if(gem.aura?.attackRateMultiplier)profile.attackRateMultiplier*=gem.aura.attackRateMultiplier;profile.critBonus+=gem.aura?.critBonus||0;profile.regenMaxHpPerSecond+=gem.aura?.regenMaxHpPerSecond||0;}return{active,activeSocket,supports,auras,profile};}
+
+const uiHandlers={install:installGem,remove:removeGem,equipFrame:equipSocketItem,buildLoadout:buildGemLoadout,describeLayout:describeSocketLayout};
+function addGemDrop(game,x,y,gem){game.gemDrops.push({x,y,gemId:gem.id,t:0,pulse:Math.random()*Math.PI*2});}
+function updateGemDrops(game,dt){const p=game.player;for(const drop of game.gemDrops){drop.t+=dt;drop.pulse+=dt*4;const d=distance(drop,p);if(d<p.pickupRadius){const s=Math.max(160,650*(1-d/p.pickupRadius));drop.x+=(p.x-drop.x)/(d||1)*s*dt;drop.y+=(p.y-drop.y)/(d||1)*s*dt;}if(d<26){game.gemState.stash.unshift(drop.gemId);toastGem(game,GEM_BY_ID[drop.gemId]);drop.dead=true;renderGemUI(game,uiHandlers);}}game.gemDrops=game.gemDrops.filter(d=>!d.dead);}
+function nearestChainTarget(game,from,q,maxRange=260){let best=null,bestD=maxRange;for(const e of game.enemies){if(e.hp<=0||q.hit.has(e))continue;const d=distance(from,e);if(d<bestD){bestD=d;best=e;}}return best;}
+function baseAttack(game,p,target,profile){p.attackTimer=p.attackRate*profile.attackRateMultiplier;const total=Math.max(1,p.projectiles+profile.extraProjectiles),base=Math.atan2(target.y-p.y,target.x-p.x),spread=.12,speed=p.projectileSpeed*profile.projectileSpeedMultiplier;for(let i=0;i<total;i++){const off=(i-(total-1)/2)*spread;game.projectiles.push({x:p.x,y:p.y,vx:Math.cos(base+off)*speed,vy:Math.sin(base+off)*speed,speed,radius:5,life:1.25*profile.projectileLifetimeMultiplier,damage:p.damage*profile.damageMultiplier,pierce:p.pierce+profile.extraPierce,chain:profile.extraChain,forks:profile.forks,forkDamageMultiplier:profile.forkDamageMultiplier,splashRadius:profile.splashRadius,splashDamageMultiplier:profile.splashDamageMultiplier,hit:new Set(),gemColor:profile.projectileColor});}game.emitBurst(p.x+Math.cos(base)*20,p.y+Math.sin(base)*20,profile.projectileColor,6,80);}
+function applySplash(game,q,impact,mainDamage,crit){if(!q.splashRadius||!q.splashDamageMultiplier)return;const splashDamage=mainDamage*q.splashDamageMultiplier;const targets=[...game.enemies].filter(e=>e!==impact&&e.hp>0&&distance(e,impact)<=q.splashRadius);for(const e of targets){game.hitEnemy(e,splashDamage,crit&&Math.random()<.35);q.hit.add(e);}game.emitBurst(impact.x,impact.y,q.gemColor||'#f5dfa2',10,120);}
+function forkProjectile(game,q,impact){if(!q.forks)return false;const base=Math.atan2(q.vy,q.vx),count=Math.max(2,q.forks),spread=.65;for(let i=0;i<count;i++){const t=count===1?0:i/(count-1),a=base-spread/2+spread*t,hit=new Set(q.hit);hit.add(impact);game.projectiles.push({x:impact.x,y:impact.y,vx:Math.cos(a)*q.speed,vy:Math.sin(a)*q.speed,speed:q.speed,radius:q.radius,life:Math.max(.45,q.life),damage:q.damage*q.forkDamageMultiplier,pierce:0,chain:q.chain,forks:0,forkDamageMultiplier:1,splashRadius:q.splashRadius,splashDamageMultiplier:q.splashDamageMultiplier,hit,gemColor:q.gemColor});}q.life=0;return true;}
+
+function patchCombat(game){game.tryAttack=function(){const p=this.player;if(p.attackTimer>0)return;const loadout=buildGemLoadout(this.gemState);if(!loadout.active)return;let target=null,best=520;for(const e of this.enemies){if(e.hp<=0)continue;const d=distance(p,e);if(d<best){best=d;target=e;}}if(target)baseAttack(this,p,target,loadout.profile);};game.updateProjectiles=function(dt){const loadout=buildGemLoadout(this.gemState),critChance=Math.min(.9,this.player.crit+loadout.profile.critBonus);for(const q of [...this.projectiles]){q.x+=q.vx*dt;q.y+=q.vy*dt;q.life-=dt;for(const e of [...this.enemies]){if(e.hp<=0||q.hit.has(e))continue;if(Math.hypot(q.x-e.x,q.y-e.y)<q.radius+e.radius){q.hit.add(e);let damage=q.damage,crit=Math.random()<critChance;if(crit)damage*=2;this.hitEnemy(e,damage,crit);applySplash(this,q,e,damage,crit);if(forkProjectile(this,q,e))break;if(q.chain>0){const next=nearestChainTarget(this,e,q);if(next){const a=Math.atan2(next.y-e.y,next.x-e.x);q.vx=Math.cos(a)*q.speed;q.vy=Math.sin(a)*q.speed;q.x=e.x;q.y=e.y;q.chain--;q.damage*=.88;continue;}}if(q.pierce>0)q.pierce--;else q.life=0;break;}}}this.projectiles=this.projectiles.filter(q=>q.life>0&&q.x>0&&q.x<CONFIG.world.width&&q.y>0&&q.y<CONFIG.world.height);};}
+function patchLootPresentation(game){
+  const baseShowChoices=game.showChoices.bind(game);
+  game.showChoices=function(eyebrow,title,choices,onPick,isItem=false){
+    baseShowChoices(eyebrow,title,choices,onPick,isItem);
+    if(!isItem)return;
+    [...this.ui.choiceCards.children].forEach((card,index)=>{const item=choices[index];if(!item?.socketLayout?.length)return;const p=card.querySelector('p');if(p)p.insertAdjacentHTML('beforeend',`<br><b class="socket-choice">孔洞：${describeSocketLayout(item.socketLayout)}</b>`);});
+  };
+}
+
+export function enableGemSystem(game){game.gemState=createGemState();game.gemDrops=[];mountGemUI(game,uiHandlers);const baseReset=game.reset.bind(game);game.reset=function(){baseReset();this.gemState=createGemState();this.gemDrops=[];updateSkillbar(this,buildGemLoadout);renderGemUI(this,uiHandlers);};const baseKill=game.killEnemy.bind(game);game.killEnemy=function(enemy){const x=enemy.x,y=enemy.y,gem=Math.random()<(enemy.boss?.58:.05)?rollGem():null;baseKill(enemy);if(gem)addGemDrop(this,x,y,gem);};const baseDrops=game.updateDrops.bind(game);game.updateDrops=function(dt){baseDrops(dt);updateGemDrops(this,dt);};const baseUpdate=game.update.bind(game);game.update=function(dt){baseUpdate(dt);const p=buildGemLoadout(this.gemState).profile;if(p.regenMaxHpPerSecond)this.player.hp=Math.min(this.player.maxHp,this.player.hp+this.player.maxHp*p.regenMaxHpPerSecond*dt);};const baseDraw=game.draw.bind(game);game.draw=function(){baseDraw();drawGemVisuals(this);};patchLootPresentation(game);patchCombat(game);return game;}

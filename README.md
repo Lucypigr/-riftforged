@@ -1,37 +1,36 @@
 # Riftforged
 
-Original browser ARPG prototype combining loot-driven character building with a compact roguelite expedition loop.
+A browser-first 2.5D loot roguelite ARPG prototype built with dependency-free JavaScript ES modules, HTML/CSS and Canvas 2D.
 
-## Play
+## Current prototype
+- pseudo-isometric 2.5D battlefield rendering
+- desktop and mobile controls
+- enemy state machine and boss waves
+- randomized equipment rarity, affixes and socket/link layouts
+- run-only blessings and persistent Ember placeholder
+- original linked skill-gem prototype with active/support/aura behavior
+- equipment-driven 2–6 socket layouts with split/full-link patterns
+- touch/click socket management and glowing ground gem drops
+- real projectile transformations including chain, pierce, multi-projectile, splash, fork and range/lifetime support
 
-Serve the repository with any static HTTP server:
+## Run locally
+Use any static web server from the repository root. For example:
 
 ```bash
-python3 -m http.server 5173
+npm run serve
 ```
 
 Then open `http://localhost:5173`.
 
-### Controls
-- Desktop: WASD / arrows move, hold left mouse to attack, Shift to dash, I for inventory.
-- Mobile: left virtual stick, Attack and Dash buttons.
-
-## Current gameplay
-- Top-down real-time combat.
-- Enemy AI states: chase → attack windup → damage → cooldown.
-- Boss every fifth wave.
-- Random equipment rarity and affixes.
-- Loot pickup and immediate stat integration.
-- Three-choice chest after every cleared wave.
-- Three-choice roguelite blessing on level-up.
-- Persistent Ember currency placeholder via localStorage.
-- Desktop and touch input from a unified command layer.
-
-## Validation
+## Validate
 
 ```bash
 npm test
 npm run check
+npm run smoke:browser
 ```
 
-See `docs/` for design, architecture, portability, and project memory.
+`smoke:browser` launches a local static server plus headless Chrome/Chromium, boots the real game page, opens the gem interface, installs a linked support and checks a mobile viewport for runtime/layout failures. GitHub Actions runs unit tests, syntax checks and the browser smoke test on feature branches and pull requests. The `main` branch deploy workflow publishes the static site to GitHub Pages after tests pass.
+
+## Project memory
+Design and architecture decisions are tracked in `docs/` so the project can be continued across sessions without relying on chat history alone.

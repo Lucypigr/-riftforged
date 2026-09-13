@@ -1,4 +1,5 @@
 import { BASE_ITEMS, AFFIXES } from '../data/items.js';
+import { rollSocketLayout } from './SocketSystem.js';
 
 export const RARITIES = {
   common:{name:'普通',color:'#b8b3a6',affixes:0,weight:60},
@@ -27,7 +28,8 @@ export function rollItem(level=1,rng=Math.random,forcedRarity=null){
     affixes.push({...a,value,text:a.format(value)});
   }
   const prefix=affixes[0]?.name ? `${affixes[0].name}的` : '';
-  return {id:`${Date.now()}-${Math.floor(rng()*1e7)}`,level,slot:base.slot,baseName:base.name,name:`${prefix}${base.name}`,rarity,color:RARITIES[rarity].color,base:structuredClone(base.base),affixes};
+  const socketLayout=(base.slot==='weapon'||base.slot==='armor')?rollSocketLayout(rarity,rng):null;
+  return {id:`${Date.now()}-${Math.floor(rng()*1e7)}`,level,slot:base.slot,baseName:base.name,name:`${prefix}${base.name}`,rarity,color:RARITIES[rarity].color,base:structuredClone(base.base),affixes,socketLayout};
 }
 
 export function itemPower(item){
