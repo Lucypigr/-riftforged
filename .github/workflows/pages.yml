@@ -38,6 +38,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup Godot 4.7.2
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.7.2
+          use-dotnet: false
+          include-templates: true
+
+      - name: Build static site and Godot prototype
+        run: |
+          mkdir -p _site
+          cp index.html styles.css _site/
+          cp -R src assets _site/
+          mkdir -p _site/godot-test
+          godot --headless --path godot --import --quit
+          godot --headless --path godot --export-release "Web" "$GITHUB_WORKSPACE/_site/godot-test/index.html"
+          test -f _site/godot-test/index.html
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
         with:
@@ -45,7 +63,7 @@ jobs:
       - name: Upload static site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
