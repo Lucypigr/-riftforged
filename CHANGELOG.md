@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.1 — 2026-09-14
+- Added a desktop-specific 1280×720 landscape runtime profile while preserving the existing portrait mobile layout.
+- Desktop camera now keeps vertical framing and expands horizontally so widescreen play shows more battlefield instead of stretching the portrait view.
+- Desktop UI hides the mobile joystick and attack button, moves skills into a centered bottom action bar, and keeps weapon/gem controls in the top-right HUD.
+- Added a desktop fullscreen control plus F/F11 shortcut; native desktop builds enter fullscreen automatically, while Web builds use the browser-safe user-triggered fullscreen request.
+- Kept the Web canvas adaptive so the game fills the available browser area rather than remaining in the old 390×844 portrait presentation.
+- Extended Godot smoke coverage for the 1280×720 desktop viewport, widescreen camera, hidden mobile controls and fullscreen button.
+
 ## 0.6.0 — 2026-09-14
 - Added the first fully playable weapon/equipment loop to Godot V2: picked weapons are stored, shown in a weapon panel and can be equipped directly.
 - Added three distinct weapon archetypes: bows use long-range rapid projectiles, blades use short-range melee hits, and focuses use slower high-damage ranged attacks.
