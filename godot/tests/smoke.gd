@@ -1,6 +1,6 @@
 extends SceneTree
 
-const WebTextFallback = preload("res://scripts/web_text_fallback.gd")
+const ChineseFontRuntimeScript = preload("res://scripts/chinese_font_runtime.gd")
 
 func _init() -> void:
     call_deferred("_run")
@@ -47,6 +47,31 @@ func _run() -> void:
         quit(1)
         return
 
+    var attack_button := ui.get_node("AttackButton") as Button
+    var gem_button := ui.get_node("GemButton") as Button
+    if attack_button.text != "攻擊" or gem_button.text != "寶石":
+        push_error("Traditional Chinese UI text was rewritten")
+        quit(1)
+        return
+
+    if root.get_node_or_null("WebTextFallback") != null:
+        push_error("Legacy periodic Web text rewriter is still active")
+        quit(1)
+        return
+
+    var font_runtime = ChineseFontRuntimeScript.new()
+    var test_font := font_runtime.call("_build_font") as FontFile
+    font_runtime.free()
+    if test_font == null:
+        push_error("Bundled Traditional Chinese bitmap font failed to build")
+        quit(1)
+        return
+    for sample in ["攻", "寶", "裂", "隙", "◆", "◇", "○"]:
+        if not test_font.has_char(sample.unicode_at(0)):
+            push_error("Bundled font missing required glyph: %s" % sample)
+            quit(1)
+            return
+
     var before: Dictionary = scene.call("debug_build_profile")
     if int(before.get("chain", -1)) != 0:
         push_error("Starter build unexpectedly has chain")
@@ -64,20 +89,5 @@ func _run() -> void:
         quit(1)
         return
 
-    var ascii_attack := WebTextFallback.sanitize_text("攻擊")
-    var ascii_gem := WebTextFallback.sanitize_text("翠綠連鎖")
-    var ascii_hud := WebTextFallback.sanitize_text("生命 100/100   擊殺 3")
-    if ascii_attack != "ATTACK" or ascii_gem != "Verdant Chain" or ascii_hud != "HP 100/100   KILLS 3":
-        push_error("Web ASCII text fallback failed")
-        quit(1)
-        return
-
-    for sample in [ascii_attack, ascii_gem, ascii_hud]:
-        for index in range(sample.length()):
-            if sample.unicode_at(index) > 126:
-                push_error("Web text fallback still contains non-ASCII glyphs")
-                quit(1)
-                return
-
-    print("GODOT_SMOKE_OK player/enemies/loot/ui/camera/gem-link/web-text ready")
+    print("GODOT_SMOKE_OK player/enemies/loot/ui/camera/gem-link/tc-font ready")
     quit(0)
