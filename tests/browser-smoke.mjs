@@ -89,19 +89,35 @@ async function main(){
 
     await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
     await send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:5});
-    await sleep(150);
-    const mobile=await evalValue(`(()=>({
-      width:innerWidth,
-      mobileControls:!!document.querySelector('#mobileControls'),
-      attack:!!document.querySelector('#attackButton'),
-      dash:!!document.querySelector('#dashButton'),
-      overflow:document.documentElement.scrollWidth>innerWidth+2
-    }))()`);
-    if(mobile.width!==390||!mobile.mobileControls||!mobile.attack||!mobile.dash)throw new Error('Mobile control smoke test failed');
+    await sleep(180);
+    const mobile=await evalValue(`(()=>{
+      const joy=document.querySelector('#joystick');
+      const stats=document.querySelector('.stats-panel');
+      const gem=document.querySelector('#gemButton');
+      const panel=document.querySelector('.gem-panel');
+      const joyStyle=getComputedStyle(joy),statsStyle=getComputedStyle(stats),gemStyle=getComputedStyle(gem);
+      return{
+        width:innerWidth,
+        portrait:matchMedia('(orientation: portrait)').matches,
+        mobileControls:!!document.querySelector('#mobileControls'),
+        attack:!!document.querySelector('#attackButton'),
+        dash:!!document.querySelector('#dashButton'),
+        overflow:document.documentElement.scrollWidth>innerWidth+2,
+        joystickWidth:parseFloat(joyStyle.width),
+        statsTop:statsStyle.top,
+        gemTop:gemStyle.top,
+        panelWidth:panel?.getBoundingClientRect().width||0
+      };
+    })()`);
+    if(mobile.width!==390||!mobile.portrait||!mobile.mobileControls||!mobile.attack||!mobile.dash)throw new Error('Mobile portrait control smoke test failed');
     if(mobile.overflow)throw new Error('Mobile viewport has horizontal overflow');
+    if(mobile.joystickWidth>100)throw new Error(`Portrait joystick is too large: ${mobile.joystickWidth}`);
+    if(mobile.statsTop==='auto')throw new Error('Portrait stats panel was not moved to the top HUD area');
+    if(mobile.gemTop==='auto')throw new Error('Portrait gem button was not moved to the top action area');
+    if(mobile.panelWidth>390)throw new Error(`Portrait gem panel exceeds viewport width: ${mobile.panelWidth}`);
 
     if(exceptions.length)throw new Error(`Browser runtime exceptions: ${exceptions.join(' | ')}`);
-    console.log('Browser smoke test passed: boot, 4-link gem UI, linked install, mobile viewport.');
+    console.log('Browser smoke test passed: boot, linked gems, compact portrait HUD/controls, mobile viewport.');
   } finally {
     try{ws?.close();}catch{}
     chrome.kill('SIGTERM');server.kill('SIGTERM');
