@@ -16,8 +16,9 @@ function drawImageActor(c,img,x,y,kind,actor,time){
   const brute=kind==='enemy'&&actor.type==='brute';
   const skitter=kind==='enemy'&&actor.type==='skitter';
   const h=boss?190:brute?154:skitter?112:kind==='player'?156:138;
-  const ratio=img.naturalWidth/Math.max(1,img.naturalHeight);
-  const w=Math.min(h*ratio,boss?150:kind==='player'?122:116);
+  const iw=img.naturalWidth||img.width||1,ih=img.naturalHeight||img.height||1;
+  const ratio=iw/Math.max(1,ih);
+  const w=Math.min(h*ratio,boss?150:kind==='player'?132:116);
   shadow(c,x,y+2,w*.28,8,boss?.58:.48);
   const bob=kind==='player'?Math.sin(time*5)*1.2:0;
   c.save();
@@ -62,7 +63,8 @@ export function enableUprightSprites(game){
     for(const a of actors){
       const s=project(this,a.o.x,a.o.y);
       c.save();c.globalAlpha=.94;c.fillStyle='#222322';c.beginPath();c.ellipse(s.x,s.y-28,a.kind==='player'?34:Math.max(28,a.o.radius*1.25),a.kind==='player'?34:Math.max(30,a.o.radius*1.3),0,0,TAU);c.fill();c.restore();
-      const key=actorSpriteKey(a.o,a.kind),img=sprites.images[key];
+      const key=actorSpriteKey(a.o,a.kind);
+      const img=sprites.processed[key]||sprites.images[key];
       if(sprites.ready[key])drawImageActor(c,img,s.x,s.y,a.kind,a.o,this.time);
       else if(a.kind==='player')hero(c,s.x,s.y,this.player,this.time);else fallbackEnemy(c,s.x,s.y,a.o);
       if(a.kind==='enemy')healthBar(c,s.x,s.y,a.o);
