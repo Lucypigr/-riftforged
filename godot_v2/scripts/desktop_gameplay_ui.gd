@@ -5,6 +5,12 @@ signal fullscreen_requested
 signal flask_requested(slot: int)
 
 const ResourceOrbScript = preload("res://scripts/resource_orb.gd")
+const BASIC_ICON = preload("res://art/ui/skill_basic.svg")
+const SKILL_ICONS = [
+    preload("res://art/ui/skill_volley.svg"),
+    preload("res://art/ui/skill_burst.svg"),
+    preload("res://art/ui/skill_dash.svg"),
+]
 
 var fullscreen_button: Button
 var desktop_mode := false
@@ -13,6 +19,7 @@ var action_dock: Panel
 var life_orb: RiftResourceOrb
 var mana_orb: RiftResourceOrb
 var basic_attack_slot: Panel
+var basic_attack_icon: TextureRect
 var flask_buttons: Array[Button] = []
 var _flask_charges: Array[int] = [3, 3]
 
@@ -22,22 +29,36 @@ func setup(font: FontFile) -> void:
     fullscreen_button.name = "FullscreenButton"
     fullscreen_button.text = "全螢幕"
     fullscreen_button.focus_mode = Control.FOCUS_NONE
-    fullscreen_button.add_theme_font_size_override("font_size", 15)
-    fullscreen_button.add_theme_stylebox_override("normal", _round_style(Color(0.07, 0.09, 0.13, 0.94), 14))
-    fullscreen_button.add_theme_stylebox_override("pressed", _round_style(Color(0.18, 0.24, 0.34, 0.98), 14))
+    fullscreen_button.add_theme_font_size_override("font_size", 14)
+    fullscreen_button.add_theme_stylebox_override("normal", _forged_style(Color(0.035, 0.040, 0.052, 0.97), Color(0.42, 0.31, 0.16), 10, 2))
+    fullscreen_button.add_theme_stylebox_override("hover", _forged_style(Color(0.075, 0.070, 0.060, 0.99), Color(0.72, 0.53, 0.26), 10, 2))
+    fullscreen_button.add_theme_stylebox_override("pressed", _forged_style(Color(0.12, 0.10, 0.07, 1.0), Color(0.86, 0.66, 0.34), 10, 2))
     fullscreen_button.pressed.connect(func(): fullscreen_requested.emit())
     root_control.add_child(fullscreen_button)
     _build_arpg_hud(font)
     _layout()
+
+func _forged_style(fill: Color, border: Color, radius: int, width: int) -> StyleBoxFlat:
+    var style := _round_style(fill, radius)
+    style.border_color = border
+    style.border_width_left = width
+    style.border_width_top = width
+    style.border_width_right = width
+    style.border_width_bottom = width
+    style.shadow_color = Color(0, 0, 0, 0.72)
+    style.shadow_size = 6
+    return style
 
 func _build_arpg_hud(font: FontFile) -> void:
     bottom_hud = Panel.new()
     bottom_hud.name = "BottomHudFrame"
     bottom_hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
     bottom_hud.z_index = -20
-    var hud_style := _round_style(Color(0.025, 0.028, 0.038, 0.95), 18)
-    hud_style.border_color = Color(0.40, 0.31, 0.18, 0.82)
-    hud_style.border_width_top = 2
+    var hud_style := _forged_style(Color(0.018, 0.020, 0.027, 0.975), Color(0.30, 0.23, 0.14, 0.96), 0, 2)
+    hud_style.border_width_left = 0
+    hud_style.border_width_right = 0
+    hud_style.border_width_bottom = 0
+    hud_style.shadow_size = 12
     bottom_hud.add_theme_stylebox_override("panel", hud_style)
     root_control.add_child(bottom_hud)
     root_control.move_child(bottom_hud, 0)
@@ -46,23 +67,20 @@ func _build_arpg_hud(font: FontFile) -> void:
     action_dock.name = "ActionDock"
     action_dock.mouse_filter = Control.MOUSE_FILTER_IGNORE
     action_dock.z_index = -10
-    var dock_style := _round_style(Color(0.045, 0.048, 0.060, 0.98), 14)
-    dock_style.border_color = Color(0.46, 0.34, 0.18, 0.88)
-    dock_style.border_width_left = 2
-    dock_style.border_width_top = 2
-    dock_style.border_width_right = 2
-    dock_style.border_width_bottom = 2
-    action_dock.add_theme_stylebox_override("panel", dock_style)
+    action_dock.add_theme_stylebox_override("panel", _forged_style(Color(0.030, 0.032, 0.042, 0.99), Color(0.50, 0.37, 0.19, 0.96), 16, 2))
     root_control.add_child(action_dock)
 
-    # The skill buttons are created by the base gameplay UI before the dock.
-    # Give them an explicit foreground layer so the dock can never cover them.
-    for skill in skill_buttons:
+    for i in range(skill_buttons.size()):
+        var skill := skill_buttons[i]
         skill.z_index = 5
-        skill.add_theme_color_override("font_color", Color(0.94, 0.90, 0.82))
+        skill.icon = SKILL_ICONS[i]
+        skill.expand_icon = true
+        skill.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
+        skill.add_theme_constant_override("icon_max_width", 42)
+        skill.add_theme_color_override("font_color", Color(0.96, 0.91, 0.80))
         skill.add_theme_color_override("font_hover_color", Color.WHITE)
         skill.add_theme_color_override("font_pressed_color", Color.WHITE)
-        skill.add_theme_color_override("font_disabled_color", Color(0.62, 0.64, 0.70))
+        skill.add_theme_color_override("font_disabled_color", Color(0.58, 0.60, 0.66))
 
     life_orb = ResourceOrbScript.new() as RiftResourceOrb
     life_orb.name = "LifeOrb"
@@ -80,22 +98,33 @@ func _build_arpg_hud(font: FontFile) -> void:
     basic_attack_slot.name = "BasicAttackSlot"
     basic_attack_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
     basic_attack_slot.z_index = 5
-    basic_attack_slot.add_theme_stylebox_override("panel", _round_style(Color(0.18, 0.12, 0.07, 0.96), 12))
+    basic_attack_slot.add_theme_stylebox_override("panel", _forged_style(Color(0.055, 0.041, 0.030, 0.99), Color(0.67, 0.47, 0.22), 12, 2))
     root_control.add_child(basic_attack_slot)
+
+    basic_attack_icon = TextureRect.new()
+    basic_attack_icon.name = "Icon"
+    basic_attack_icon.texture = BASIC_ICON
+    basic_attack_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    basic_attack_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    basic_attack_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    basic_attack_slot.add_child(basic_attack_icon)
+
     var attack_label := Label.new()
     attack_label.name = "Label"
-    attack_label.text = "左鍵\n基本攻擊"
-    attack_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    attack_label.text = "左鍵  基本攻擊"
     attack_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    attack_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+    attack_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
     attack_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    attack_label.add_theme_font_size_override("font_size", 14)
-    attack_label.add_theme_color_override("font_color", Color(0.96, 0.82, 0.56))
+    attack_label.add_theme_font_size_override("font_size", 12)
+    attack_label.add_theme_color_override("font_color", Color(0.98, 0.84, 0.56))
+    attack_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 1))
+    attack_label.add_theme_constant_override("shadow_offset_x", 1)
+    attack_label.add_theme_constant_override("shadow_offset_y", 1)
     basic_attack_slot.add_child(attack_label)
 
     var flask_defs := [
-        {"name": "生命藥水", "key": "4", "color": Color(0.36, 0.07, 0.08, 0.96)},
-        {"name": "魔力藥水", "key": "5", "color": Color(0.05, 0.12, 0.34, 0.96)},
+        {"name": "生命藥水", "key": "4", "color": Color(0.28, 0.035, 0.045, 0.98), "border": Color(0.66, 0.22, 0.18)},
+        {"name": "魔力藥水", "key": "5", "color": Color(0.025, 0.075, 0.25, 0.98), "border": Color(0.20, 0.38, 0.76)},
     ]
     for i in range(flask_defs.size()):
         var data: Dictionary = flask_defs[i]
@@ -103,9 +132,11 @@ func _build_arpg_hud(font: FontFile) -> void:
         flask.name = "FlaskButton%d" % i
         flask.z_index = 5
         flask.focus_mode = Control.FOCUS_NONE
-        flask.add_theme_font_size_override("font_size", 12)
-        flask.add_theme_stylebox_override("normal", _round_style(data["color"] as Color, 12))
-        flask.add_theme_stylebox_override("pressed", _round_style(Color(0.52, 0.40, 0.20, 0.98), 12))
+        flask.add_theme_font_size_override("font_size", 11)
+        flask.add_theme_color_override("font_color", Color(0.96, 0.90, 0.80))
+        flask.add_theme_stylebox_override("normal", _forged_style(data["color"] as Color, data["border"] as Color, 10, 2))
+        flask.add_theme_stylebox_override("hover", _forged_style((data["color"] as Color).lightened(0.10), (data["border"] as Color).lightened(0.20), 10, 2))
+        flask.add_theme_stylebox_override("pressed", _forged_style(Color(0.36, 0.27, 0.14, 0.99), Color(0.86, 0.67, 0.35), 10, 2))
         flask.pressed.connect(_request_flask.bind(i))
         root_control.add_child(flask)
         flask_buttons.append(flask)
@@ -123,98 +154,87 @@ func _layout() -> void:
     if root_control == null or equipment_button == null:
         return
 
-    if fullscreen_button != null:
-        fullscreen_button.visible = desktop_mode
-    if bottom_hud != null:
-        bottom_hud.visible = desktop_mode
-    if action_dock != null:
-        action_dock.visible = desktop_mode
-    if life_orb != null:
-        life_orb.visible = desktop_mode
-    if mana_orb != null:
-        mana_orb.visible = desktop_mode
-    if basic_attack_slot != null:
-        basic_attack_slot.visible = desktop_mode
-    for flask in flask_buttons:
-        flask.visible = desktop_mode
+    if fullscreen_button != null: fullscreen_button.visible = desktop_mode
+    if bottom_hud != null: bottom_hud.visible = desktop_mode
+    if action_dock != null: action_dock.visible = desktop_mode
+    if life_orb != null: life_orb.visible = desktop_mode
+    if mana_orb != null: mana_orb.visible = desktop_mode
+    if basic_attack_slot != null: basic_attack_slot.visible = desktop_mode
+    for flask in flask_buttons: flask.visible = desktop_mode
 
     if not desktop_mode:
-        if joystick_back != null:
-            joystick_back.visible = true
-        if attack_button != null:
-            attack_button.visible = true
-        if status_label != null:
-            status_label.visible = true
-        if hp_bar != null:
-            hp_bar.visible = true
+        if joystick_back != null: joystick_back.visible = true
+        if attack_button != null: attack_button.visible = true
+        if status_label != null: status_label.visible = true
+        if hp_bar != null: hp_bar.visible = true
         return
 
     var size := get_viewport().get_visible_rect().size
-    if joystick_back != null:
-        joystick_back.visible = false
-    if attack_button != null:
-        attack_button.visible = false
-    if status_label != null:
-        status_label.visible = false
-    if hp_bar != null:
-        hp_bar.visible = false
+    if joystick_back != null: joystick_back.visible = false
+    if attack_button != null: attack_button.visible = false
+    if status_label != null: status_label.visible = false
+    if hp_bar != null: hp_bar.visible = false
 
     title_label.position = Vector2(24, 16)
     title_label.size = Vector2(330, 32)
     title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-
     weapon_status.position = Vector2(24, 48)
     weapon_status.size = Vector2(minf(520.0, size.x * 0.42), 26)
     weapon_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-
     hint_label.position = Vector2(24, 76)
     hint_label.size = Vector2(minf(620.0, size.x * 0.50), 34)
     hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 
     gem_button.size = Vector2(82, 42)
     gem_button.position = Vector2(size.x - 96, 16)
-
     equipment_button.size = Vector2(82, 42)
     equipment_button.position = Vector2(size.x - 188, 16)
+    fullscreen_button.size = Vector2(104, 42)
+    fullscreen_button.position = Vector2(size.x - 302, 16)
 
-    if fullscreen_button != null:
-        fullscreen_button.size = Vector2(104, 42)
-        fullscreen_button.position = Vector2(size.x - 302, 16)
-
-    var hud_height := 154.0
+    var hud_height := 164.0
     bottom_hud.position = Vector2(0, size.y - hud_height)
     bottom_hud.size = Vector2(size.x, hud_height)
 
-    var orb_size := Vector2(138, 138)
+    var orb_size := Vector2(148, 148)
     life_orb.size = orb_size
-    life_orb.position = Vector2(20, size.y - 145)
+    life_orb.position = Vector2(18, size.y - 154)
     mana_orb.size = orb_size
-    mana_orb.position = Vector2(size.x - orb_size.x - 20, size.y - 145)
+    mana_orb.position = Vector2(size.x - orb_size.x - 18, size.y - 154)
 
-    var dock_width := minf(560.0, size.x - 430.0)
-    action_dock.size = Vector2(dock_width, 108)
-    action_dock.position = Vector2((size.x - dock_width) * 0.5, size.y - 116)
+    var dock_width := minf(650.0, size.x - 420.0)
+    action_dock.size = Vector2(dock_width, 118)
+    action_dock.position = Vector2((size.x - dock_width) * 0.5, size.y - 126)
 
-    var slot_size := Vector2(80, 78)
+    var slot_size := Vector2(116, 82)
     var gap := 10.0
     var total_width := slot_size.x * 4.0 + gap * 3.0
     var start_x := (size.x - total_width) * 0.5
-    var slot_y := size.y - 101
+    var slot_y := size.y - 106
     basic_attack_slot.size = slot_size
     basic_attack_slot.position = Vector2(start_x, slot_y)
-    for i in range(skill_buttons.size()):
-        skill_buttons[i].visible = true
-        skill_buttons[i].z_index = 5
-        skill_buttons[i].size = slot_size
-        skill_buttons[i].position = Vector2(start_x + float(i + 1) * (slot_size.x + gap), slot_y)
-        skill_buttons[i].add_theme_stylebox_override("normal", _round_style(Color(0.085, 0.095, 0.135, 0.98), 12))
-        skill_buttons[i].add_theme_stylebox_override("hover", _round_style(Color(0.14, 0.17, 0.25, 0.99), 12))
-        skill_buttons[i].add_theme_stylebox_override("pressed", _round_style(Color(0.24, 0.30, 0.48, 0.98), 12))
-        skill_buttons[i].add_theme_stylebox_override("disabled", _round_style(Color(0.055, 0.060, 0.080, 0.96), 12))
+    basic_attack_icon.position = Vector2(8, 5)
+    basic_attack_icon.size = Vector2(52, 52)
+    var attack_label := basic_attack_slot.get_node("Label") as Label
+    attack_label.position = Vector2(4, 55)
+    attack_label.size = Vector2(slot_size.x - 8, 22)
 
-    var flask_size := Vector2(70, 66)
+    var skill_fills := [Color(0.035, 0.105, 0.085, 0.99), Color(0.18, 0.055, 0.035, 0.99), Color(0.055, 0.065, 0.18, 0.99)]
+    var skill_borders := [Color(0.26, 0.65, 0.49), Color(0.80, 0.35, 0.17), Color(0.36, 0.43, 0.90)]
+    for i in range(skill_buttons.size()):
+        var skill := skill_buttons[i]
+        skill.visible = true
+        skill.z_index = 5
+        skill.size = slot_size
+        skill.position = Vector2(start_x + float(i + 1) * (slot_size.x + gap), slot_y)
+        skill.add_theme_stylebox_override("normal", _forged_style(skill_fills[i], skill_borders[i], 12, 2))
+        skill.add_theme_stylebox_override("hover", _forged_style(skill_fills[i].lightened(0.12), skill_borders[i].lightened(0.18), 12, 2))
+        skill.add_theme_stylebox_override("pressed", _forged_style(skill_fills[i].lightened(0.22), Color(0.92, 0.78, 0.48), 12, 2))
+        skill.add_theme_stylebox_override("disabled", _forged_style(Color(0.035, 0.038, 0.050, 0.97), Color(0.22, 0.22, 0.25), 12, 1))
+
+    var flask_size := Vector2(74, 70)
     var flask_x: float = life_orb.position.x + orb_size.x + 18.0
-    var flask_y: float = size.y - 86.0
+    var flask_y: float = size.y - 91.0
     for i in range(flask_buttons.size()):
         flask_buttons[i].size = flask_size
         flask_buttons[i].position = Vector2(flask_x + float(i) * (flask_size.x + 8.0), flask_y)
@@ -223,7 +243,6 @@ func _layout() -> void:
     var panel_height := minf(500.0, size.y - 190.0)
     equipment_panel.size = Vector2(panel_width, panel_height)
     equipment_panel.position = Vector2(size.x - panel_width - 24.0, 76.0)
-
     if gem_panel != null:
         var gem_width := minf(410.0, size.x * 0.40)
         var gem_height := minf(520.0, size.y - 190.0)
@@ -232,12 +251,10 @@ func _layout() -> void:
 
 func set_hp(current: float, maximum: float) -> void:
     super.set_hp(current, maximum)
-    if life_orb != null:
-        life_orb.set_value(current, maximum)
+    if life_orb != null: life_orb.set_value(current, maximum)
 
 func set_mana(current: float, maximum: float) -> void:
-    if mana_orb != null:
-        mana_orb.set_value(current, maximum)
+    if mana_orb != null: mana_orb.set_value(current, maximum)
 
 func set_flask_charges(charges: Array[int]) -> void:
     _flask_charges = charges.duplicate()
