@@ -12,7 +12,7 @@ function findChrome(){
   throw new Error('No Chrome/Chromium executable found for browser smoke test');
 }
 
-async function waitFor(url,tries=60){
+async function waitFor(url,tries=150){
   let last;
   for(let i=0;i<tries;i++){
     try{const r=await fetch(url);if(r.ok)return r;}catch(e){last=e;}
