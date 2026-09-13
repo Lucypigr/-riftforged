@@ -21,8 +21,6 @@ func _run() -> void:
         _fail("Traditional Chinese font is not a TrueType file")
         return
 
-    # This is the critical path used by the exported game: load the Godot-imported
-    # project resource. Do not use FontFile.load_dynamic_font() for bundled assets.
     var imported_resource := ResourceLoader.load(FONT_PATH, "FontFile", ResourceLoader.CACHE_MODE_REUSE)
     var imported_font := imported_resource as FontFile
     if imported_font == null:
@@ -47,7 +45,7 @@ func _run() -> void:
     await process_frame
     await process_frame
 
-    for path in ["Player", "Enemies", "Ground", "MobileUI"]:
+    for path in ["Player", "Enemies", "Projectiles", "Ground", "MobileUI"]:
         if scene.get_node_or_null(path) == null:
             _fail("Missing required v2 node: %s" % path)
             return
@@ -59,6 +57,14 @@ func _run() -> void:
         return
     if camera.keep_aspect != Camera3D.KEEP_WIDTH:
         _fail("Clean rebuild portrait camera must keep width")
+        return
+
+    var player_visual := player.get_node_or_null("Visual") as Sprite3D
+    if player_visual == null or player_visual.texture == null:
+        _fail("Player is not using an upright Sprite3D visual")
+        return
+    if player.get_node_or_null("Body") != null:
+        _fail("Legacy capsule body visual is still present on player")
         return
 
     var enemies := scene.get_node("Enemies")
@@ -80,11 +86,14 @@ func _run() -> void:
         _fail("Clean rebuild UI is not using the shared imported font theme")
         return
     if ui_root.theme.default_font != imported_font:
-        # ResourceLoader CACHE_MODE_REUSE should return the same imported FontFile.
         _fail("UI theme is not using the cached imported FontFile")
         return
 
     var first_enemy := enemies.get_child(0)
+    var enemy_visual := first_enemy.get_node_or_null("Visual") as Sprite3D
+    if enemy_visual == null or enemy_visual.texture == null:
+        _fail("Enemy is not using an upright Sprite3D visual")
+        return
     var enemy_label := first_enemy.get_node_or_null("NameLabel") as Label3D
     if enemy_label == null or enemy_label.font == null:
         _fail("Enemy Label3D does not use the imported Traditional Chinese font")
@@ -106,5 +115,20 @@ func _run() -> void:
         _fail("Runtime enemy state is incomplete")
         return
 
-    print("RIFTFORGED_V2_SMOKE_OK imported-ttf/ui/label3d/camera/combat-pack ready")
+    first_enemy.position = Vector3(2.0, 0.0, 0.0)
+    scene.call("_attack")
+    await process_frame
+    if int(scene.call("debug_projectile_count")) < 1:
+        _fail("Attack did not spawn a visible projectile")
+        return
+
+    await create_timer(0.36).timeout
+    if int(scene.call("debug_projectile_count")) != 0:
+        _fail("Projectile did not resolve after travel")
+        return
+    if enemy_label.text.ends_with("60"):
+        _fail("Projectile impact did not damage its target")
+        return
+
+    print("RIFTFORGED_V2_SMOKE_OK imported-ttf/sprite-actors/projectile-combat ready")
     quit(0)
