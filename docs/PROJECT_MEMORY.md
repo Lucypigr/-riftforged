@@ -1,14 +1,24 @@
 # PROJECT MEMORY
 
 ## Confirmed direction
-- Original loot-driven ARPG inspired by structural/design principles from Path of Exile and Grim Dawn, without copying proprietary assets, code, characters, maps or exact content.
+- Original loot-driven ARPG inspired by the design principles of games such as Path of Exile and Grim Dawn, without copying proprietary assets/code/content.
 - Add roguelite run structure.
-- Core Grim Dawn `database.arz`, `templates.arc`, official tutorial and modding guide have been supplied and structurally analyzed; reuse the data-driven separation lessons, not copyrighted content.
-- User wants a Path-of-Exile-like **gem feel**: socket allocation matters, supports require links to affect the active skill, unused sockets can hold aura gems, and gems are physical drops.
+- Grim Dawn database/tooling analysis is available as structural reference; use its data-driven separation ideas rather than copying game content.
+- User wants a PoE-style linked gem feel: physical socket/link decisions, touch-friendly installation, ground gem drops and build-changing support behavior.
 - User wants playable results early, then iterative optimization.
 
-## Prototype defaults
-- 2.5D pseudo-isometric Web first, built from the existing Canvas 2D renderer.
+## Current prototype defaults
+- 2D top-down gameplay with pseudo-isometric 2.5D presentation.
+- Web first, using dependency-free JavaScript ES modules + Canvas 2D.
 - Desktop + mobile input from the first version.
-- GitHub repository `Lucypigr/-riftforged` is the canonical project source.
-- Keep the current JavaScript ES-module stack unless a later platform requirement justifies migration.
+- GitHub repository is the canonical project source.
+
+## Gem prototype status
+- Feature branch: `feature/poe-style-gems`.
+- Pull request: #7.
+- Eight-socket free matrix currently used as a stable prototype topology.
+- Active/support/aura gems implemented with linked-group compatibility.
+- Real gameplay transformations include chain, multi-projectile, pierce, splash, fork, projectile reach, damage/speed trade-offs, crit and regeneration.
+- Normal enemies use a 5% gem-drop chance; bosses use a much higher chance.
+- Feature-branch/PR CI runs Node tests and JavaScript syntax checks and is passing.
+- Next planned system step: move socket count/link topology from the fixed matrix into dropped build equipment while safely returning displaced gems to the stash.
