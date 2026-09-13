@@ -10,8 +10,8 @@ var fullscreen_button: Button
 var desktop_mode := false
 var bottom_hud: Panel
 var action_dock: Panel
-var life_orb
-var mana_orb
+var life_orb: RiftResourceOrb
+var mana_orb: RiftResourceOrb
 var basic_attack_slot: Panel
 var flask_buttons: Array[Button] = []
 var _flask_charges: Array[int] = [3, 3]
@@ -53,12 +53,12 @@ func _build_arpg_hud(font: FontFile) -> void:
     action_dock.add_theme_stylebox_override("panel", dock_style)
     root_control.add_child(action_dock)
 
-    life_orb = ResourceOrbScript.new()
+    life_orb = ResourceOrbScript.new() as RiftResourceOrb
     life_orb.name = "LifeOrb"
     root_control.add_child(life_orb)
     life_orb.setup(font, "生命", Color(0.76, 0.055, 0.07, 1.0))
 
-    mana_orb = ResourceOrbScript.new()
+    mana_orb = ResourceOrbScript.new() as RiftResourceOrb
     mana_orb.name = "ManaOrb"
     root_control.add_child(mana_orb)
     mana_orb.setup(font, "魔力", Color(0.05, 0.24, 0.82, 1.0))
@@ -89,12 +89,15 @@ func _build_arpg_hud(font: FontFile) -> void:
         flask.name = "FlaskButton%d" % i
         flask.focus_mode = Control.FOCUS_NONE
         flask.add_theme_font_size_override("font_size", 12)
-        flask.add_theme_stylebox_override("normal", _round_style(data["color"], 12))
+        flask.add_theme_stylebox_override("normal", _round_style(data["color"] as Color, 12))
         flask.add_theme_stylebox_override("pressed", _round_style(Color(0.52, 0.40, 0.20, 0.98), 12))
-        flask.pressed.connect(func(slot := i): flask_requested.emit(slot))
+        flask.pressed.connect(_request_flask.bind(i))
         root_control.add_child(flask)
         flask_buttons.append(flask)
     set_flask_charges(_flask_charges)
+
+func _request_flask(slot: int) -> void:
+    flask_requested.emit(slot)
 
 func set_desktop_mode(enabled: bool) -> void:
     desktop_mode = enabled
@@ -191,8 +194,8 @@ func _layout() -> void:
         skill_buttons[i].add_theme_stylebox_override("pressed", _round_style(Color(0.24, 0.30, 0.48, 0.98), 12))
 
     var flask_size := Vector2(70, 66)
-    var flask_x := life_orb.position.x + orb_size.x + 18.0
-    var flask_y := size.y - 86.0
+    var flask_x: float = life_orb.position.x + orb_size.x + 18.0
+    var flask_y: float = size.y - 86.0
     for i in range(flask_buttons.size()):
         flask_buttons[i].size = flask_size
         flask_buttons[i].position = Vector2(flask_x + float(i) * (flask_size.x + 8.0), flask_y)
