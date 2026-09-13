@@ -6,6 +6,9 @@ config_version=5
 config/name="Riftforged Godot Prototype"
 run/main_scene="res://main.tscn"
 
+[autoload]
+WebTextFallback="*res://scripts/web_text_fallback.gd"
+
 [display]
 window/size/viewport_width=390
 window/size/viewport_height=844
