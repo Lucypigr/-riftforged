@@ -1,5 +1,7 @@
 extends SceneTree
 
+const WebTextFallback = preload("res://scripts/web_text_fallback.gd")
+
 func _init() -> void:
     call_deferred("_run")
 
@@ -62,5 +64,20 @@ func _run() -> void:
         quit(1)
         return
 
-    print("GODOT_SMOKE_OK player/enemies/loot/ui/camera/gem-link ready")
+    var ascii_attack := WebTextFallback.sanitize_text("攻擊")
+    var ascii_gem := WebTextFallback.sanitize_text("翠綠連鎖")
+    var ascii_hud := WebTextFallback.sanitize_text("生命 100/100   擊殺 3")
+    if ascii_attack != "ATTACK" or ascii_gem != "Verdant Chain" or ascii_hud != "HP 100/100   KILLS 3":
+        push_error("Web ASCII text fallback failed")
+        quit(1)
+        return
+
+    for sample in [ascii_attack, ascii_gem, ascii_hud]:
+        for index in range(sample.length()):
+            if sample.unicode_at(index) > 126:
+                push_error("Web text fallback still contains non-ASCII glyphs")
+                quit(1)
+                return
+
+    print("GODOT_SMOKE_OK player/enemies/loot/ui/camera/gem-link/web-text ready")
     quit(0)
