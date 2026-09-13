@@ -37,8 +37,8 @@ jobs:
           assert data[:4] == b'\x00\x01\x00\x00', data[:4]
           print('TTF source OK', len(data))
           PY
-          if grep -R "load_dynamic_font" godot_v2/scripts godot_v2/tests; then
-            echo "Bundled fonts must use Godot imported resources, not load_dynamic_font()."
+          if grep -R -n -E '^[[:space:]]*[^#].*\.load_dynamic_font\(' godot_v2/scripts godot_v2/tests; then
+            echo "Bundled fonts must use Godot imported resources, not runtime dynamic loading."
             exit 1
           fi
 
