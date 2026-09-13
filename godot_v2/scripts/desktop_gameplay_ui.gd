@@ -34,6 +34,7 @@ func _build_arpg_hud(font: FontFile) -> void:
     bottom_hud = Panel.new()
     bottom_hud.name = "BottomHudFrame"
     bottom_hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    bottom_hud.z_index = -20
     var hud_style := _round_style(Color(0.025, 0.028, 0.038, 0.95), 18)
     hud_style.border_color = Color(0.40, 0.31, 0.18, 0.82)
     hud_style.border_width_top = 2
@@ -44,6 +45,7 @@ func _build_arpg_hud(font: FontFile) -> void:
     action_dock = Panel.new()
     action_dock.name = "ActionDock"
     action_dock.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    action_dock.z_index = -10
     var dock_style := _round_style(Color(0.045, 0.048, 0.060, 0.98), 14)
     dock_style.border_color = Color(0.46, 0.34, 0.18, 0.88)
     dock_style.border_width_left = 2
@@ -53,19 +55,31 @@ func _build_arpg_hud(font: FontFile) -> void:
     action_dock.add_theme_stylebox_override("panel", dock_style)
     root_control.add_child(action_dock)
 
+    # The skill buttons are created by the base gameplay UI before the dock.
+    # Give them an explicit foreground layer so the dock can never cover them.
+    for skill in skill_buttons:
+        skill.z_index = 5
+        skill.add_theme_color_override("font_color", Color(0.94, 0.90, 0.82))
+        skill.add_theme_color_override("font_hover_color", Color.WHITE)
+        skill.add_theme_color_override("font_pressed_color", Color.WHITE)
+        skill.add_theme_color_override("font_disabled_color", Color(0.62, 0.64, 0.70))
+
     life_orb = ResourceOrbScript.new() as RiftResourceOrb
     life_orb.name = "LifeOrb"
+    life_orb.z_index = 5
     root_control.add_child(life_orb)
-    life_orb.setup(font, "生命", Color(0.76, 0.055, 0.07, 1.0))
+    life_orb.setup(font, "生命", Color(0.90, 0.035, 0.055, 1.0))
 
     mana_orb = ResourceOrbScript.new() as RiftResourceOrb
     mana_orb.name = "ManaOrb"
+    mana_orb.z_index = 5
     root_control.add_child(mana_orb)
-    mana_orb.setup(font, "魔力", Color(0.05, 0.24, 0.82, 1.0))
+    mana_orb.setup(font, "魔力", Color(0.035, 0.24, 0.96, 1.0))
 
     basic_attack_slot = Panel.new()
     basic_attack_slot.name = "BasicAttackSlot"
     basic_attack_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    basic_attack_slot.z_index = 5
     basic_attack_slot.add_theme_stylebox_override("panel", _round_style(Color(0.18, 0.12, 0.07, 0.96), 12))
     root_control.add_child(basic_attack_slot)
     var attack_label := Label.new()
@@ -87,6 +101,7 @@ func _build_arpg_hud(font: FontFile) -> void:
         var data: Dictionary = flask_defs[i]
         var flask := Button.new()
         flask.name = "FlaskButton%d" % i
+        flask.z_index = 5
         flask.focus_mode = Control.FOCUS_NONE
         flask.add_theme_font_size_override("font_size", 12)
         flask.add_theme_stylebox_override("normal", _round_style(data["color"] as Color, 12))
@@ -188,10 +203,14 @@ func _layout() -> void:
     basic_attack_slot.size = slot_size
     basic_attack_slot.position = Vector2(start_x, slot_y)
     for i in range(skill_buttons.size()):
+        skill_buttons[i].visible = true
+        skill_buttons[i].z_index = 5
         skill_buttons[i].size = slot_size
         skill_buttons[i].position = Vector2(start_x + float(i + 1) * (slot_size.x + gap), slot_y)
         skill_buttons[i].add_theme_stylebox_override("normal", _round_style(Color(0.085, 0.095, 0.135, 0.98), 12))
+        skill_buttons[i].add_theme_stylebox_override("hover", _round_style(Color(0.14, 0.17, 0.25, 0.99), 12))
         skill_buttons[i].add_theme_stylebox_override("pressed", _round_style(Color(0.24, 0.30, 0.48, 0.98), 12))
+        skill_buttons[i].add_theme_stylebox_override("disabled", _round_style(Color(0.055, 0.060, 0.080, 0.96), 12))
 
     var flask_size := Vector2(70, 66)
     var flask_x: float = life_orb.position.x + orb_size.x + 18.0

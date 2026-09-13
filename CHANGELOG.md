@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.3 — 2026-09-14
+- Fixed the desktop life/mana orbs appearing uncolored in Web/Compatibility rendering by replacing the custom CanvasItem shader with deterministic canvas-drawn circular liquid fills.
+- Strengthened the orb colors so life renders clearly red and mana clearly blue while preserving live fill levels and numeric values.
+- Fixed the centered action dock covering the three active skill buttons; the desktop row now visibly shows left-click basic attack plus skills 1/2/3.
+- Added HUD regression checks for orb colors, Web-safe orb rendering, skill visibility, hotkey labels and draw order.
+
 ## 0.6.2 — 2026-09-14
 - Rebuilt the desktop combat HUD around a dark-fantasy ARPG bottom frame inspired by classic life-orb/mana-orb layouts without copying external game assets.
 - Added a large red life orb on the lower-left and blue mana orb on the lower-right, with live numeric values and shader-driven liquid fill.
