@@ -2,6 +2,8 @@ extends Node
 
 # Shared Traditional Chinese UI theme. The real TrueType font is generated
 # before Godot import/export; no browser/system CJK fallback or bitmap atlas.
+# Load the raw TTF directly so the Web build does not depend on Godot's import
+# database recognizing a file that was generated during the current CI run.
 
 const THEME_PATH := "res://themes/rift_ui_theme.tres"
 const FONT_PATH := "res://fonts/NotoSansTC-Riftforged.ttf"
@@ -20,9 +22,12 @@ func _ready() -> void:
     call_deferred("_apply_current_scene")
 
 func _build_font() -> FontFile:
-    var font := load(FONT_PATH) as FontFile
-    if font != null:
-        font.allow_system_fallback = false
+    var font := FontFile.new()
+    var err := font.load_dynamic_font(FONT_PATH)
+    if err != OK:
+        push_error("Unable to load native TTF at %s (error %d)" % [FONT_PATH, err])
+        return null
+    font.allow_system_fallback = false
     return font
 
 func _apply_current_scene() -> void:
