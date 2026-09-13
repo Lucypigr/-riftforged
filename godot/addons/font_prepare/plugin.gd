@@ -23,9 +23,6 @@ func _enter_tree() -> void:
         for line in output:
             print("[font-prepare] ", line)
         if exit_code == 0 and FileAccess.file_exists(GENERATED_FONT):
-            var fs := get_editor_interface().get_resource_filesystem()
-            fs.update_file(GENERATED_FONT)
-            fs.scan()
             print("[font-prepare] Traditional Chinese TrueType font is ready")
             return
 
