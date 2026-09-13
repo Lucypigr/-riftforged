@@ -5,8 +5,9 @@ class_name RiftLootSystem
 # Master profile -> level band -> dynamic weighted item table -> weighted affixes.
 
 const BASE_ITEMS := [
-    {"id":"rust_bow", "name":"殘鐵短弓", "slot":"武器", "min_level":1, "weight":24.0},
-    {"id":"rift_blade", "name":"裂痕短刃", "slot":"武器", "min_level":1, "weight":22.0},
+    {"id":"rust_bow", "name":"殘鐵短弓", "slot":"武器", "weapon_type":"bow", "base_damage":27.0, "attack_cooldown":0.35, "range":11.8, "min_level":1, "weight":24.0},
+    {"id":"rift_blade", "name":"裂痕短刃", "slot":"武器", "weapon_type":"blade", "base_damage":42.0, "attack_cooldown":0.48, "range":2.55, "min_level":1, "weight":22.0},
+    {"id":"rift_focus", "name":"咒痕法器", "slot":"武器", "weapon_type":"focus", "base_damage":34.0, "attack_cooldown":0.52, "range":10.2, "min_level":2, "weight":15.0},
     {"id":"hide_coat", "name":"旅者皮甲", "slot":"護甲", "min_level":1, "weight":22.0},
     {"id":"old_boots", "name":"荒徑長靴", "slot":"鞋", "min_level":1, "weight":16.0},
     {"id":"rift_charm", "name":"微光護符", "slot":"護符", "min_level":2, "weight":12.0},
@@ -42,11 +43,17 @@ static func roll_master(profile: String, monster_level: int, elite: bool, guaran
 
 static func _roll_dynamic(profile: String, monster_level: int, elite: bool) -> Dictionary:
     var candidates: Array[Dictionary] = []
-    for item in BASE_ITEMS:
-        if int(item["min_level"]) <= monster_level + 1:
-            candidates.append(item)
+    for source in BASE_ITEMS:
+        if int(source["min_level"]) > monster_level + 1:
+            continue
+        var item: Dictionary = source.duplicate(true)
+        if profile == "caster" and String(item["id"]) == "rift_focus":
+            item["weight"] = float(item["weight"]) * 2.6
+        elif profile == "warden" and String(item["id"]) == "warden_plate":
+            item["weight"] = float(item["weight"]) * 2.2
+        candidates.append(item)
     if candidates.is_empty():
-        candidates.append(BASE_ITEMS[0])
+        candidates.append(BASE_ITEMS[0].duplicate(true))
 
     var base := _weighted_pick(candidates).duplicate(true)
     var rarity_roll := randf()
@@ -67,11 +74,6 @@ static func _roll_dynamic(profile: String, monster_level: int, elite: bool) -> D
             rarity = "魔法"
             affix_count = 1
 
-    if profile == "caster" and base["slot"] == "武器" and randf() < 0.35:
-        base["name"] = "咒痕法器"
-    elif profile == "warden" and base["slot"] == "護甲" and randf() < 0.35:
-        base["name"] = "衛士壁甲"
-
     var prefix: Dictionary = {}
     var suffix: Dictionary = {}
     if affix_count >= 1:
@@ -91,7 +93,7 @@ static func _roll_dynamic(profile: String, monster_level: int, elite: bool) -> D
     elif rarity == "稀有":
         color = Color(1.0, 0.82, 0.28)
 
-    return {
+    var result := {
         "id": String(base["id"]),
         "base_name": String(base["name"]),
         "name": display_name,
@@ -103,6 +105,10 @@ static func _roll_dynamic(profile: String, monster_level: int, elite: bool) -> D
         "color": color,
         "profile": profile,
     }
+    for key in ["weapon_type", "base_damage", "attack_cooldown", "range"]:
+        if base.has(key):
+            result[key] = base[key]
+    return result
 
 static func _weighted_pick(entries: Array) -> Dictionary:
     var total := 0.0
