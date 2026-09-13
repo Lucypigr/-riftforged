@@ -22,3 +22,5 @@ jobs:
         run: npm test
       - name: Syntax check
         run: npm run check
+      - name: Browser smoke test
+        run: npm run smoke:browser
