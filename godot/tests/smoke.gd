@@ -58,19 +58,47 @@ func _run() -> void:
         push_error("Legacy periodic Web text rewriter is still active")
         quit(1)
         return
+    if FileAccess.file_exists("res://fonts/rift_ui_tc.fnt") or FileAccess.file_exists("res://fonts/rift_ui_tc.svg"):
+        push_error("Legacy bitmap font assets are still present")
+        quit(1)
+        return
+    if not FileAccess.file_exists("res://fonts/NotoSansTC-Riftforged.ttf"):
+        push_error("Generated Traditional Chinese TrueType font is missing")
+        quit(1)
+        return
 
     var font_runtime = ChineseFontRuntimeScript.new()
     var test_font := font_runtime.call("_build_font") as FontFile
     font_runtime.free()
     if test_font == null:
-        push_error("Bundled Traditional Chinese bitmap font failed to build")
+        push_error("Traditional Chinese TrueType font failed to load")
         quit(1)
         return
-    for sample in ["攻", "寶", "裂", "隙", "◆", "◇", "○"]:
+    for sample in ["攻", "擊", "寶", "石", "裂", "隙", "獸", "◆", "◇", "○"]:
         if not test_font.has_char(sample.unicode_at(0)):
-            push_error("Bundled font missing required glyph: %s" % sample)
+            push_error("Native font missing required glyph: %s" % sample)
             quit(1)
             return
+
+    if attack_button.theme == null or attack_button.theme.default_font == null:
+        push_error("Shared UI Theme was not applied to the mobile controls")
+        quit(1)
+        return
+    if not attack_button.theme.default_font.has_char("攻".unicode_at(0)):
+        push_error("Shared UI Theme font cannot render Traditional Chinese")
+        quit(1)
+        return
+
+    var first_enemy := enemies_node.get_child(0)
+    var enemy_label := first_enemy.get_node_or_null("EnemyLabel") as Label3D
+    if enemy_label == null or enemy_label.font == null:
+        push_error("Enemy Label3D did not receive the native font")
+        quit(1)
+        return
+    if not enemy_label.font.has_char("裂".unicode_at(0)):
+        push_error("Enemy Label3D font cannot render Traditional Chinese")
+        quit(1)
+        return
 
     var before: Dictionary = scene.call("debug_build_profile")
     if int(before.get("chain", -1)) != 0:
@@ -89,5 +117,5 @@ func _run() -> void:
         quit(1)
         return
 
-    print("GODOT_SMOKE_OK player/enemies/loot/ui/camera/gem-link/tc-font ready")
+    print("GODOT_SMOKE_OK player/enemies/loot/ui/camera/gem-link/native-tc-theme ready")
     quit(0)
