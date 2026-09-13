@@ -68,11 +68,13 @@ async function main(){
       gemButton:!!document.querySelector('#gemButton'),
       gemOverlay:!!document.querySelector('#gemOverlay'),
       sockets:document.querySelectorAll('.gem-socket').length,
-      stash:document.querySelectorAll('.gem-card').length
+      stash:document.querySelectorAll('.gem-card').length,
+      socketSource:document.querySelector('#socketSourceLayout')?.textContent
     }))()`);
     if(!initial.canvas)throw new Error('Canvas did not initialize');
     if(!initial.gemButton||!initial.gemOverlay)throw new Error('Gem UI did not mount');
-    if(initial.sockets!==8)throw new Error(`Expected 8 sockets, got ${initial.sockets}`);
+    if(initial.sockets!==4)throw new Error(`Expected 4 starter sockets, got ${initial.sockets}`);
+    if(initial.socketSource!=='4連')throw new Error(`Expected starter 4-link source, got ${initial.socketSource}`);
     if(initial.stash<2)throw new Error(`Expected starter gem stash, got ${initial.stash}`);
 
     await evalValue(`document.querySelector('#gemButton').click()`);
@@ -99,7 +101,7 @@ async function main(){
     if(mobile.overflow)throw new Error('Mobile viewport has horizontal overflow');
 
     if(exceptions.length)throw new Error(`Browser runtime exceptions: ${exceptions.join(' | ')}`);
-    console.log('Browser smoke test passed: boot, gem UI, linked install, mobile viewport.');
+    console.log('Browser smoke test passed: boot, 4-link gem UI, linked install, mobile viewport.');
   } finally {
     try{ws?.close();}catch{}
     chrome.kill('SIGTERM');server.kill('SIGTERM');
