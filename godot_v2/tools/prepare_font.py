@@ -6,8 +6,13 @@ import sys
 import urllib.request
 from pathlib import Path
 
-FONT_URL = "https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/OTF/TraditionalChinese/NotoSansCJKtc-Regular.otf"
-FONT_NAME = "NotoSansCJKtc-Regular.otf"
+# Use a TrueType-outline font for the Web build. The previous OTF/CFF file was
+# accepted by desktop/headless Godot but still produced missing-glyph boxes on
+# iPhone Safari. This file is imported by Godot before export and loaded as a
+# normal project FontFile resource (not with load_dynamic_font at runtime).
+FONT_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanstc/NotoSansTC%5Bwght%5D.ttf"
+FONT_NAME = "NotoSansTC-Riftforged.ttf"
+TTF_MAGIC = b"\x00\x01\x00\x00"
 
 
 def prepare_font(project_root: Path) -> Path:
@@ -16,21 +21,21 @@ def prepare_font(project_root: Path) -> Path:
 
     if output.exists():
         data = output.read_bytes()
-        if len(data) > 10_000_000 and data[:4] == b"OTTO":
+        if len(data) > 5_000_000 and data[:4] == TTF_MAGIC:
             return output
         output.unlink()
 
     request = urllib.request.Request(
         FONT_URL,
-        headers={"User-Agent": "Riftforged-v2-font-builder/1.0"},
+        headers={"User-Agent": "Riftforged-v2-font-builder/2.0"},
     )
     with urllib.request.urlopen(request, timeout=180) as response:
         data = response.read()
 
-    if len(data) < 10_000_000:
+    if len(data) < 5_000_000:
         raise RuntimeError(f"Downloaded font is unexpectedly small: {len(data)} bytes")
-    if data[:4] != b"OTTO":
-        raise RuntimeError(f"Downloaded file is not an OpenType CFF font: magic={data[:4]!r}")
+    if data[:4] != TTF_MAGIC:
+        raise RuntimeError(f"Downloaded file is not a TrueType font: magic={data[:4]!r}")
 
     output.write_bytes(data)
     return output

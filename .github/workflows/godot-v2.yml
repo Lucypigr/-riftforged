@@ -26,11 +26,27 @@ jobs:
           use-dotnet: false
           include-templates: true
 
-      - name: Prepare static Traditional Chinese font
+      - name: Prepare imported Traditional Chinese font
         run: |
           python3 godot_v2/tools/prepare_font.py --project godot_v2
-          test "$(head -c 4 godot_v2/fonts/NotoSansCJKtc-Regular.otf)" = "OTTO"
-          test "$(stat -c%s godot_v2/fonts/NotoSansCJKtc-Regular.otf)" -gt 10000000
+          python3 - <<'PY'
+          from pathlib import Path
+          font = Path('godot_v2/fonts/NotoSansTC-Riftforged.ttf')
+          data = font.read_bytes()
+          assert len(data) > 5_000_000, len(data)
+          assert data[:4] == b'\x00\x01\x00\x00', data[:4]
+          print('TTF source OK', len(data))
+
+          for root in (Path('godot_v2/scripts'), Path('godot_v2/tests')):
+              for path in root.rglob('*.gd'):
+                  for line_no, line in enumerate(path.read_text(encoding='utf-8').splitlines(), 1):
+                      code = line.strip()
+                      if code.startswith('#'):
+                          continue
+                      if '.load_dynamic_font(' in code:
+                          raise SystemExit(f'Runtime bundled-font loading forbidden: {path}:{line_no}: {code}')
+          print('Bundled font code uses imported ResourceLoader path')
+          PY
 
       - name: Import clean rebuild
         run: godot --headless --path godot_v2 --import --quit
