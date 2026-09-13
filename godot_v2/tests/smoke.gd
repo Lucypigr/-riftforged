@@ -3,7 +3,7 @@ extends SceneTree
 const FONT_PATH := "res://fonts/NotoSansTC-Riftforged.ttf"
 const LootSystem = preload("res://scripts/loot_system.gd")
 const WeaponSkillSystem = preload("res://scripts/weapon_skill_system.gd")
-const REQUIRED_GLYPHS := ["攻", "擊", "寶", "石", "裂", "隙", "獸", "菁", "英", "獵", "犬", "衛", "士", "咒", "徒", "裝", "備", "武", "器", "技", "能", "衝", "刺", "爆", "◆", "◇"]
+const REQUIRED_GLYPHS := ["攻", "擊", "寶", "石", "裂", "隙", "獸", "菁", "英", "獵", "犬", "衛", "士", "咒", "徒", "裝", "備", "武", "器", "技", "能", "衝", "刺", "爆", "全", "螢", "幕", "◆", "◇"]
 
 func _init() -> void:
     call_deferred("_run")
@@ -57,10 +57,24 @@ func _run() -> void:
         _fail("Combat effect pools were not prewarmed")
         return
 
+    var desktop: Dictionary = scene.call("debug_desktop_profile")
+    if not bool(desktop.get("enabled", false)):
+        _fail("Desktop runtime profile did not activate on desktop CI")
+        return
+    if desktop.get("content_scale_size", Vector2i.ZERO) != Vector2i(1280, 720):
+        _fail("Desktop logical viewport is not 1280x720 landscape")
+        return
+    if bool(desktop.get("joystick_visible", true)) or bool(desktop.get("attack_button_visible", true)):
+        _fail("Desktop layout still shows mobile joystick/attack controls")
+        return
+    if not bool(desktop.get("fullscreen_button", false)):
+        _fail("Desktop fullscreen control is missing")
+        return
+
     var player := scene.get_node("Player")
     var camera := player.get_node_or_null("Camera3D") as Camera3D
-    if camera == null or camera.projection != Camera3D.PROJECTION_ORTHOGONAL or camera.keep_aspect != Camera3D.KEEP_WIDTH:
-        _fail("Portrait-safe orthographic camera is not active")
+    if camera == null or camera.projection != Camera3D.PROJECTION_ORTHOGONAL or camera.keep_aspect != Camera3D.KEEP_HEIGHT:
+        _fail("Desktop landscape orthographic camera is not active")
         return
     var player_visual := player.get_node_or_null("Visual") as Sprite3D
     if player_visual == null or player_visual.texture == null:
@@ -91,18 +105,22 @@ func _run() -> void:
     var attack := ui_root.get_node_or_null("AttackButton") as Button
     var gem := ui_root.get_node_or_null("GemButton") as Button
     var equipment := ui_root.get_node_or_null("EquipmentButton") as Button
+    var fullscreen := ui_root.get_node_or_null("FullscreenButton") as Button
     var skill0 := ui_root.get_node_or_null("SkillButton0") as Button
     var skill1 := ui_root.get_node_or_null("SkillButton1") as Button
     var skill2 := ui_root.get_node_or_null("SkillButton2") as Button
     var hint := ui_root.get_node_or_null("Hint") as Label
-    if attack == null or gem == null or equipment == null or skill0 == null or skill1 == null or skill2 == null or hint == null:
-        _fail("Weapon/skill mobile+desktop UI did not mount")
+    if attack == null or gem == null or equipment == null or fullscreen == null or skill0 == null or skill1 == null or skill2 == null or hint == null:
+        _fail("Weapon/skill desktop UI did not mount")
         return
-    if attack.text != "攻擊" or gem.text != "寶石" or equipment.text != "裝備":
-        _fail("Traditional Chinese controls changed unexpectedly")
+    if attack.text != "攻擊" or gem.text != "寶石" or equipment.text != "裝備" or fullscreen.text != "全螢幕":
+        _fail("Traditional Chinese desktop controls changed unexpectedly")
         return
-    if not hint.text.contains("WASD") or not hint.text.contains("1/2/3"):
-        _fail("Desktop weapon/skill controls are not documented")
+    if attack.visible:
+        _fail("Desktop attack button should be hidden in favor of left-click combat")
+        return
+    if not hint.text.contains("WASD") or not hint.text.contains("1/2/3") or not hint.text.contains("全螢幕"):
+        _fail("Desktop landscape controls are not documented")
         return
     if ui_root.theme == null or ui_root.theme.default_font != imported_font:
         _fail("Shared imported Traditional Chinese theme is not active")
@@ -122,12 +140,12 @@ func _run() -> void:
     scene.call("_attack")
     await process_frame
     if int(scene.call("debug_projectile_count")) < 1:
-        _fail("Mobile attack did not activate a pooled projectile")
+        _fail("Basic attack did not activate a pooled projectile")
         return
     await create_timer(0.36).timeout
     await process_frame
     if enemy_label.text == before_mobile:
-        _fail("Mobile projectile did not damage its target")
+        _fail("Basic projectile did not damage its target")
         return
 
     first_enemy.position = Vector3(3.0, 0.0, 0.0)
@@ -189,5 +207,5 @@ func _run() -> void:
         _fail("Dynamic weighted loot/affix record is incomplete")
         return
 
-    print("RIFTFORGED_V2_SMOKE_OK perf2/weapon-inventory/3-skills/pools/loot/mobile+desktop ready")
+    print("RIFTFORGED_V2_SMOKE_OK desktop-1280x720/fullscreen/weapon-skills/pools/loot ready")
     quit(0)
