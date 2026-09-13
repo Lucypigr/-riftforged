@@ -6,9 +6,12 @@
 - Added red/green/blue active, support and aura gems with touch/click installation.
 - Support gems work only when linked to the currently selected active gem; aura gems work without links.
 - Added real projectile chain, extra projectile, pierce, damage, attack-speed, crit and regeneration gem effects.
+- Added build-defining projectile transformations: splash explosions, projectile fork and extended projectile range/lifetime.
+- Added an additional chain-focused active gem so different linked setups can reuse supports in different ways.
 - Added 5% normal-enemy gem drops and a much higher boss gem-drop chance.
 - Added glowing ground gem drops with proximity auto-pickup and gem loot notifications.
-- Added automated tests for linked support, unlinked support, aura behavior and duplicate gem installation.
+- Added automated tests for linked support, unlinked support, aura behavior, duplicate gem installation, splash, fork and reach support rules.
+- Added pull-request/feature-branch CI that runs tests and JavaScript syntax checks.
 
 ## 0.3.0 — 2026-09-13
 - Added a true pseudo-isometric 2.5D rendering mode while preserving the existing gameplay rules.
