@@ -16,6 +16,7 @@
 - Expanded automated tests for linked support, unlinked support, aura behavior, duplicate gem installation, splash, fork, reach, equipment socket swapping and socket-layout generation.
 - Added a dependency-free headless Chrome/Chromium browser smoke test covering actual page boot, gem UI interaction and a mobile viewport.
 - Feature-branch/PR CI now runs unit tests, JavaScript syntax checks and the browser smoke test, with superseded runs cancelled automatically.
+- Optimized portrait phones with a compact HUD/control layout and a true 0.72x world-camera pullback so more battlefield is visible instead of shrinking only the player sprite.
 
 ## 0.3.0 — 2026-09-13
 - Added a true pseudo-isometric 2.5D rendering mode while preserving the existing gameplay rules.
