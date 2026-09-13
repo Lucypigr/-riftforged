@@ -1,5 +1,7 @@
 extends "res://scripts/app_grim_perf.gd"
 
+const CombatPool = preload("res://scripts/combat_pool.gd")
+
 # Second browser-performance pass: keep movement at 60 Hz while moving AI
 # decisions, label visibility and ground-loot housekeeping off the hot path.
 
@@ -10,6 +12,26 @@ const ENEMY_LABEL_DISTANCE_SQ := 240.25
 const LOOT_LABEL_DISTANCE_SQ := 121.0
 
 var _last_label_scan_ms := 0
+var _combat_pool
+
+func _ready() -> void:
+    super._ready()
+    if projectiles_root == null:
+        return
+    _combat_pool = CombatPool.new()
+    _combat_pool.setup(
+        projectiles_root,
+        self,
+        _player_core_mesh,
+        _player_aura_mesh,
+        _enemy_core_mesh,
+        _enemy_aura_mesh,
+        _player_core_mat,
+        _player_aura_mat,
+        _enemy_core_mat,
+        _enemy_aura_mat,
+        _flash_mesh
+    )
 
 func _spawn_enemy(force_elite: bool = false, slot: int = -1) -> void:
     super._spawn_enemy(force_elite, slot)
@@ -91,6 +113,93 @@ func _update_enemies(delta: float) -> void:
             enemy.move_and_slide()
         enemies[i] = entry
 
+func _enemy_cast_projectile(enemy: CharacterBody3D, damage: float) -> void:
+    if _combat_pool == null:
+        super._enemy_cast_projectile(enemy, damage)
+        return
+    var projectile: Node3D = _combat_pool.acquire_projectile(true, "EnemyHex_%d" % projectile_serial)
+    if projectile == null:
+        super._enemy_cast_projectile(enemy, damage)
+        return
+    projectile_serial += 1
+    projectile.global_position = enemy.global_position + Vector3(0, 1.0, 0)
+    var destination := player.global_position + Vector3(0, 0.82, 0)
+    var tween := create_tween()
+    tween.tween_property(projectile, "global_position", destination, 0.62)
+    tween.tween_callback(_resolve_enemy_projectile.bind(projectile, destination, damage))
+
+func _spawn_projectile(enemy_id: int, target: CharacterBody3D) -> void:
+    if _combat_pool == null:
+        super._spawn_projectile(enemy_id, target)
+        return
+    var projectile: Node3D = _combat_pool.acquire_projectile(false, "RiftBolt_%d" % projectile_serial)
+    if projectile == null:
+        super._spawn_projectile(enemy_id, target)
+        return
+    projectile_serial += 1
+    projectile.global_position = player.global_position + Vector3(0, 1.02, 0)
+    var destination := target.global_position + Vector3(0, 0.95, 0)
+    var tween := create_tween()
+    tween.set_trans(Tween.TRANS_QUAD)
+    tween.set_ease(Tween.EASE_IN)
+    tween.tween_property(projectile, "global_position", destination, PROJECTILE_TRAVEL_TIME)
+    tween.tween_callback(_resolve_projectile_hit.bind(enemy_id, projectile))
+
+func _spawn_miss_projectile(destination: Vector3) -> void:
+    if _combat_pool == null:
+        super._spawn_miss_projectile(destination)
+        return
+    var projectile: Node3D = _combat_pool.acquire_projectile(false, "RiftMiss_%d" % projectile_serial)
+    if projectile == null:
+        super._spawn_miss_projectile(destination)
+        return
+    projectile_serial += 1
+    projectile.global_position = player.global_position + Vector3(0, 1.02, 0)
+    var tween := create_tween()
+    tween.tween_property(projectile, "global_position", destination, PROJECTILE_TRAVEL_TIME)
+    tween.tween_callback(_release_or_free_projectile.bind(projectile))
+
+func _resolve_projectile_hit(enemy_id: int, projectile: Node3D) -> void:
+    _release_or_free_projectile(projectile)
+    var index := _enemy_index_by_id(enemy_id)
+    if index >= 0:
+        _damage_enemy(index, ATTACK_DAMAGE)
+
+func _resolve_enemy_projectile(projectile: Node3D, destination: Vector3, damage: float) -> void:
+    _release_or_free_projectile(projectile)
+    var flat_player := player.global_position
+    flat_player.y = destination.y
+    if flat_player.distance_to(destination) <= 1.35:
+        _damage_player(damage)
+        _spawn_hit_flash(destination, Color(0.35, 0.55, 1.0))
+
+func _release_or_free_projectile(projectile: Node3D) -> void:
+    if not is_instance_valid(projectile):
+        return
+    if projectile.has_meta("pool_active") and _combat_pool != null:
+        _combat_pool.release_projectile(projectile)
+    else:
+        projectile.queue_free()
+
+func _spawn_hit_flash(position: Vector3, color: Color, scale_to: float = 2.8) -> void:
+    if _combat_pool == null:
+        super._spawn_hit_flash(position, color, scale_to)
+        return
+    var flash: MeshInstance3D = _combat_pool.acquire_flash()
+    if flash == null:
+        super._spawn_hit_flash(position, color, scale_to)
+        return
+    flash.position = position
+    var key := color.to_html(true)
+    var mat := _flash_materials.get(key) as StandardMaterial3D
+    if mat == null:
+        mat = _emissive(color, 2.0)
+        _flash_materials[key] = mat
+    flash.material_override = mat
+    var tween := create_tween()
+    tween.tween_property(flash, "scale", Vector3.ONE * scale_to, 0.14)
+    tween.tween_callback(_combat_pool.release_flash.bind(flash))
+
 func _spawn_loot_visual(position: Vector3, item: Dictionary) -> void:
     super._spawn_loot_visual(position, item)
     while loot_drops.size() > MAX_GROUND_LOOT:
@@ -121,9 +230,20 @@ func _update_label_visibility() -> void:
             if child is Label3D:
                 (child as Label3D).visible = distance_sq <= LOOT_LABEL_DISTANCE_SQ
 
+func debug_projectile_count() -> int:
+    var active := 0
+    if _combat_pool != null:
+        active = _combat_pool.active_projectile_count()
+    for child in projectiles_root.get_children():
+        if not child.has_meta("pool_active"):
+            active += 1
+    return active
+
 func debug_perf_pass2() -> Dictionary:
+    var pool_stats := {} if _combat_pool == null else _combat_pool.stats()
     return {
         "ai_phases": AI_PHASES,
         "loot_cap": MAX_GROUND_LOOT,
         "label_scan_ms": LABEL_SCAN_MS,
+        "pool": pool_stats,
     }
