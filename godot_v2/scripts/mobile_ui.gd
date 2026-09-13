@@ -56,7 +56,7 @@ func setup(font: FontFile) -> void:
 
     hint_label = Label.new()
     hint_label.name = "Hint"
-    hint_label.text = "左下移動 · 右下攻擊 · 右上寶石"
+    hint_label.text = "手機：搖桿／攻擊 · 電腦：WASD＋滑鼠左鍵射擊"
     hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     hint_label.add_theme_font_size_override("font_size", 13)
     hint_label.add_theme_color_override("font_color", Color(0.75, 0.80, 0.88))
