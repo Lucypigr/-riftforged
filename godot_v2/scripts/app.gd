@@ -13,6 +13,7 @@ const ATTACK_RANGE := 11.5
 const ATTACK_DAMAGE := 28.0
 const ATTACK_COOLDOWN := 0.36
 const PROJECTILE_TRAVEL_TIME := 0.28
+const MOUSE_TARGET_RADIUS := 86.0
 
 var player: CharacterBody3D
 var player_visual: Sprite3D
@@ -310,6 +311,19 @@ func _attack_at_screen(screen_position: Vector2) -> void:
     if attack_cooldown > 0 or camera == null or player == null:
         return
 
+    var screen_target := _enemy_index_near_screen(screen_position)
+    if screen_target >= 0:
+        var targeted_entry: Dictionary = enemies[screen_target]
+        var targeted_enemy := targeted_entry["node"] as CharacterBody3D
+        var targeted_direction := targeted_enemy.global_position - player.global_position
+        targeted_direction.y = 0
+        if targeted_direction.length() <= ATTACK_RANGE:
+            if player_visual != null and absf(targeted_direction.x) > 0.02:
+                player_visual.flip_h = targeted_direction.x < 0.0
+            attack_cooldown = ATTACK_COOLDOWN
+            _spawn_projectile(int(targeted_entry["id"]), targeted_enemy)
+            return
+
     var ground_point := _screen_to_ground(screen_position)
     var aim := ground_point - player.global_position
     aim.y = 0
@@ -332,6 +346,24 @@ func _attack_at_screen(screen_position: Vector2) -> void:
 
     var destination := player.global_position + direction * shot_distance + Vector3(0, 1.0, 0)
     _spawn_miss_projectile(destination)
+
+func _enemy_index_near_screen(screen_position: Vector2) -> int:
+    var best := -1
+    var best_screen_distance := MOUSE_TARGET_RADIUS
+    for i in range(enemies.size()):
+        var enemy := enemies[i]["node"] as CharacterBody3D
+        if not is_instance_valid(enemy):
+            continue
+        if player.global_position.distance_to(enemy.global_position) > ATTACK_RANGE:
+            continue
+        if camera.is_position_behind(enemy.global_position):
+            continue
+        var enemy_screen := camera.unproject_position(enemy.global_position + Vector3(0, 1.0, 0))
+        var screen_distance := enemy_screen.distance_to(screen_position)
+        if screen_distance <= best_screen_distance:
+            best = i
+            best_screen_distance = screen_distance
+    return best
 
 func _screen_to_ground(screen_position: Vector2) -> Vector3:
     var ray_origin := camera.project_ray_origin(screen_position)
@@ -389,8 +421,8 @@ func _create_projectile() -> Node3D:
     projectile_serial += 1
     var projectile := Node3D.new()
     projectile.name = "RiftBolt_%d" % projectile_serial
-    projectile.global_position = player.global_position + Vector3(0, 1.02, 0)
     projectiles_root.add_child(projectile)
+    projectile.global_position = player.global_position + Vector3(0, 1.02, 0)
 
     var core := MeshInstance3D.new()
     core.name = "Core"
