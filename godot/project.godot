@@ -9,6 +9,9 @@ run/main_scene="res://main.tscn"
 [autoload]
 ChineseFontRuntime="*res://scripts/chinese_font_runtime.gd"
 
+[editor_plugins]
+enabled=PackedStringArray("res://addons/font_prepare/plugin.cfg")
+
 [display]
 window/size/viewport_width=390
 window/size/viewport_height=844
