@@ -76,11 +76,15 @@ func _run() -> void:
     var attack := ui_root.get_node_or_null("AttackButton") as Button
     var gem := ui_root.get_node_or_null("GemButton") as Button
     var title := ui_root.get_node_or_null("Title") as Label
-    if attack == null or gem == null or title == null:
+    var hint := ui_root.get_node_or_null("Hint") as Label
+    if attack == null or gem == null or title == null or hint == null:
         _fail("Clean rebuild mobile UI did not mount")
         return
     if attack.text != "攻擊" or gem.text != "寶石" or title.text != "裂隙遠征 · 重製版":
         _fail("Traditional Chinese UI strings changed unexpectedly")
+        return
+    if not hint.text.contains("WASD") or not hint.text.contains("左鍵射擊"):
+        _fail("Desktop keyboard/mouse controls are not documented in the HUD")
         return
     if ui_root.theme == null or ui_root.theme.default_font == null:
         _fail("Clean rebuild UI is not using the shared imported font theme")
@@ -119,10 +123,11 @@ func _run() -> void:
     scene.call("_attack")
     await process_frame
     if int(scene.call("debug_projectile_count")) < 1:
-        _fail("Attack did not spawn a visible projectile")
+        _fail("Mobile attack did not spawn a visible projectile")
         return
 
     await create_timer(0.36).timeout
+    await process_frame
     if int(scene.call("debug_projectile_count")) != 0:
         _fail("Projectile did not resolve after travel")
         return
@@ -130,5 +135,25 @@ func _run() -> void:
         _fail("Projectile impact did not damage its target")
         return
 
-    print("RIFTFORGED_V2_SMOKE_OK imported-ttf/sprite-actors/projectile-combat ready")
+    first_enemy.position = Vector3(3.0, 0.0, 0.0)
+    var mouse_event := InputEventMouseButton.new()
+    mouse_event.button_index = MOUSE_BUTTON_LEFT
+    mouse_event.pressed = true
+    mouse_event.position = camera.unproject_position(first_enemy.global_position + Vector3(0, 1.0, 0))
+    scene.call("_unhandled_input", mouse_event)
+    await process_frame
+    if int(scene.call("debug_projectile_count")) < 1:
+        _fail("Desktop left click did not spawn a projectile toward the cursor")
+        return
+
+    await create_timer(0.36).timeout
+    await process_frame
+    if int(scene.call("debug_projectile_count")) != 0:
+        _fail("Desktop mouse projectile did not resolve")
+        return
+    if not enemy_label.text.ends_with("4"):
+        _fail("Desktop left-click shot did not damage the aimed enemy")
+        return
+
+    print("RIFTFORGED_V2_SMOKE_OK imported-ttf/sprite-actors/mobile+desktop-projectile-combat ready")
     quit(0)
