@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.2 — 2026-09-14
+- Rebuilt the desktop combat HUD around a dark-fantasy ARPG bottom frame inspired by classic life-orb/mana-orb layouts without copying external game assets.
+- Added a large red life orb on the lower-left and blue mana orb on the lower-right, with live numeric values and shader-driven liquid fill.
+- Added a centered bottom action dock containing the left-click basic attack slot plus the three existing active skills.
+- Added functional life and mana flasks on desktop hotkeys 4/5 with charges, healing/restoration and HUD updates.
+- Added a real mana resource: active skills now consume mana, mana regenerates over time and insufficient mana blocks the cast with feedback.
+- Kept the existing 1280×720 desktop landscape/fullscreen profile and the mobile portrait control layout intact.
+- Added a dedicated ARPG HUD smoke test covering life/mana controls, skill mana consumption and flask behavior before Web export.
+
 ## 0.6.1 — 2026-09-14
 - Added a desktop-specific 1280×720 landscape runtime profile while preserving the existing portrait mobile layout.
 - Desktop camera now keeps vertical framing and expands horizontally so widescreen play shows more battlefield instead of stretching the portrait view.
