@@ -31,16 +31,22 @@ jobs:
           python3 godot_v2/tools/prepare_font.py --project godot_v2
           python3 - <<'PY'
           from pathlib import Path
-          path = Path('godot_v2/fonts/NotoSansTC-Riftforged.ttf')
-          data = path.read_bytes()
+          font = Path('godot_v2/fonts/NotoSansTC-Riftforged.ttf')
+          data = font.read_bytes()
           assert len(data) > 5_000_000, len(data)
           assert data[:4] == b'\x00\x01\x00\x00', data[:4]
           print('TTF source OK', len(data))
+
+          for root in (Path('godot_v2/scripts'), Path('godot_v2/tests')):
+              for path in root.rglob('*.gd'):
+                  for line_no, line in enumerate(path.read_text(encoding='utf-8').splitlines(), 1):
+                      code = line.strip()
+                      if code.startswith('#'):
+                          continue
+                      if '.load_dynamic_font(' in code:
+                          raise SystemExit(f'Runtime bundled-font loading forbidden: {path}:{line_no}: {code}')
+          print('Bundled font code uses imported ResourceLoader path')
           PY
-          if grep -R -n -E '^[[:space:]]*[^#].*\.load_dynamic_font\(' godot_v2/scripts godot_v2/tests; then
-            echo "Bundled fonts must use Godot imported resources, not runtime dynamic loading."
-            exit 1
-          fi
 
       - name: Import clean rebuild
         run: godot --headless --path godot_v2 --import --quit
