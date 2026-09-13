@@ -5,6 +5,11 @@ const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
 const ISO_X = .72;
 const ISO_Y = .36;
 
+export function cameraZoomForView(view){
+  const portrait=view?.h>view?.w*1.08;
+  return portrait?.72:1;
+}
+
 function seedProps(){
   const props=[];
   const fixed=[
@@ -29,18 +34,19 @@ export function enableIsoMode2(game){
   const props=seedProps();
 
   game.draw=function(){
-    const c=this.ctx,w=this.view.w,h=this.view.h;
+    const c=this.ctx,w=this.view.w,h=this.view.h,zoom=cameraZoomForView(this.view);
     const shakeX=(Math.random()-.5)*this.camera.shake,shakeY=(Math.random()-.5)*this.camera.shake;
     c.clearRect(0,0,w,h);c.fillStyle='#080a0d';c.fillRect(0,0,w,h);
 
     c.save();
     c.translate(w/2+shakeX,h/2+shakeY);
+    c.scale(zoom,zoom);
     c.transform(ISO_X,ISO_Y,-ISO_X,ISO_Y,0,0);
     c.translate(-this.player.x,-this.player.y);
     drawIsoGround(c);
     c.restore();
 
-    c.save();c.translate(shakeX,shakeY);
+    c.save();c.translate(shakeX,shakeY);c.translate(w/2,h/2);c.scale(zoom,zoom);c.translate(-w/2,-h/2);
     const renderables=[];
     for(const p of props)renderables.push({depth:p.x+p.y,kind:'prop',obj:p});
     for(const e of this.enemies)renderables.push({depth:e.x+e.y,kind:'enemy',obj:e});
