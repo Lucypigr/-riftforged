@@ -23,6 +23,7 @@ var ui: RiftMobileUI
 var ui_font: FontFile
 var enemies: Array[Dictionary] = []
 var enemy_serial := 0
+var projectile_serial := 0
 var move_input := Vector2.ZERO
 var player_hp := 100.0
 var player_max_hp := 100.0
@@ -257,6 +258,13 @@ func _physics_process(delta: float) -> void:
 
     _update_enemies(delta)
 
+func _unhandled_input(event: InputEvent) -> void:
+    if event is InputEventMouseButton:
+        var mouse := event as InputEventMouseButton
+        if mouse.button_index == MOUSE_BUTTON_LEFT and mouse.pressed:
+            _attack_at_screen(mouse.position)
+            get_viewport().set_input_as_handled()
+
 func _update_enemies(delta: float) -> void:
     for i in range(enemies.size() - 1, -1, -1):
         var entry: Dictionary = enemies[i]
@@ -298,12 +306,89 @@ func _attack() -> void:
     attack_cooldown = ATTACK_COOLDOWN
     _spawn_projectile(int(entry["id"]), enemy)
 
+func _attack_at_screen(screen_position: Vector2) -> void:
+    if attack_cooldown > 0 or camera == null or player == null:
+        return
+
+    var ground_point := _screen_to_ground(screen_position)
+    var aim := ground_point - player.global_position
+    aim.y = 0
+    var aim_distance := aim.length()
+    if aim_distance < 0.12:
+        return
+
+    var direction := aim / aim_distance
+    var shot_distance := minf(ATTACK_RANGE, aim_distance)
+    if player_visual != null and absf(direction.x) > 0.02:
+        player_visual.flip_h = direction.x < 0.0
+
+    attack_cooldown = ATTACK_COOLDOWN
+    var hit_index := _enemy_index_on_aim(direction, shot_distance)
+    if hit_index >= 0:
+        var entry: Dictionary = enemies[hit_index]
+        var enemy := entry["node"] as CharacterBody3D
+        _spawn_projectile(int(entry["id"]), enemy)
+        return
+
+    var destination := player.global_position + direction * shot_distance + Vector3(0, 1.0, 0)
+    _spawn_miss_projectile(destination)
+
+func _screen_to_ground(screen_position: Vector2) -> Vector3:
+    var ray_origin := camera.project_ray_origin(screen_position)
+    var ray_direction := camera.project_ray_normal(screen_position)
+    if absf(ray_direction.y) < 0.0001:
+        return player.global_position
+    var t := -ray_origin.y / ray_direction.y
+    if t <= 0.0:
+        return player.global_position
+    return ray_origin + ray_direction * t
+
+func _enemy_index_on_aim(direction: Vector3, max_distance: float) -> int:
+    var best := -1
+    var best_along := INF
+    for i in range(enemies.size()):
+        var entry: Dictionary = enemies[i]
+        var enemy := entry["node"] as CharacterBody3D
+        if not is_instance_valid(enemy):
+            continue
+        var offset := enemy.global_position - player.global_position
+        offset.y = 0
+        var along := offset.dot(direction)
+        if along < 0.0 or along > max_distance:
+            continue
+        var lateral := (offset - direction * along).length()
+        var hit_radius := 0.88 if bool(entry["elite"]) else 0.72
+        if lateral <= hit_radius and along < best_along:
+            best = i
+            best_along = along
+    return best
+
 func _spawn_projectile(enemy_id: int, target: CharacterBody3D) -> void:
     if projectiles_root == null or not is_instance_valid(target):
         return
 
+    var projectile := _create_projectile()
+    var destination := target.global_position + Vector3(0, 0.95, 0)
+    var tween := create_tween()
+    tween.set_trans(Tween.TRANS_QUAD)
+    tween.set_ease(Tween.EASE_IN)
+    tween.tween_property(projectile, "global_position", destination, _projectile_travel_time(projectile.global_position, destination))
+    tween.tween_callback(_resolve_projectile_hit.bind(enemy_id, projectile))
+
+func _spawn_miss_projectile(destination: Vector3) -> void:
+    if projectiles_root == null:
+        return
+    var projectile := _create_projectile()
+    var tween := create_tween()
+    tween.set_trans(Tween.TRANS_QUAD)
+    tween.set_ease(Tween.EASE_IN)
+    tween.tween_property(projectile, "global_position", destination, _projectile_travel_time(projectile.global_position, destination))
+    tween.tween_callback(projectile.queue_free)
+
+func _create_projectile() -> Node3D:
+    projectile_serial += 1
     var projectile := Node3D.new()
-    projectile.name = "RiftBolt_%d" % enemy_id
+    projectile.name = "RiftBolt_%d" % projectile_serial
     projectile.global_position = player.global_position + Vector3(0, 1.02, 0)
     projectiles_root.add_child(projectile)
 
@@ -337,13 +422,11 @@ func _spawn_projectile(enemy_id: int, target: CharacterBody3D) -> void:
     aura_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
     aura.material_override = aura_mat
     projectile.add_child(aura)
+    return projectile
 
-    var destination := target.global_position + Vector3(0, 0.95, 0)
-    var tween := create_tween()
-    tween.set_trans(Tween.TRANS_QUAD)
-    tween.set_ease(Tween.EASE_IN)
-    tween.tween_property(projectile, "global_position", destination, PROJECTILE_TRAVEL_TIME)
-    tween.tween_callback(_resolve_projectile_hit.bind(enemy_id, projectile))
+func _projectile_travel_time(from: Vector3, to: Vector3) -> float:
+    var distance := from.distance_to(to)
+    return maxf(0.12, PROJECTILE_TRAVEL_TIME * distance / ATTACK_RANGE)
 
 func _resolve_projectile_hit(enemy_id: int, projectile: Node3D) -> void:
     if is_instance_valid(projectile):
