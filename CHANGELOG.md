@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.1 — 2026-09-14
+- Added a second Godot Web performance pass for the 2.5D ARPG runtime.
+- Prewarmed and reused player/enemy projectile nodes plus hit-flash nodes to reduce browser allocation/GC spikes during sustained combat.
+- Kept movement/collision at 60 Hz while splitting enemy AI decisions across two alternating phases.
+- Throttled enemy/loot Label3D visibility scans and hides distant labels to reduce text rendering cost.
+- Capped persistent ground loot at 24 drops so long combat sessions cannot grow an unbounded scene tree.
+- Extended the Godot smoke test to verify pooled effects and the second performance layer before Web export.
+
 ## 0.5.0 — 2026-09-13
 - Continued the parallel Godot 4.7.2 mobile prototype after the first iPhone test was accepted.
 - Expanded the Godot scene from a single target into a small combat pack with normal and elite Rift beasts, contact damage, player HP, death/respawn and continuous enemy replacement.
