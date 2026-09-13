@@ -2,7 +2,8 @@ extends SceneTree
 
 const FONT_PATH := "res://fonts/NotoSansTC-Riftforged.ttf"
 const LootSystem = preload("res://scripts/loot_system.gd")
-const REQUIRED_GLYPHS := ["攻", "擊", "寶", "石", "裂", "隙", "獸", "菁", "英", "獵", "犬", "衛", "士", "咒", "徒", "◆", "◇"]
+const WeaponSkillSystem = preload("res://scripts/weapon_skill_system.gd")
+const REQUIRED_GLYPHS := ["攻", "擊", "寶", "石", "裂", "隙", "獸", "菁", "英", "獵", "犬", "衛", "士", "咒", "徒", "裝", "備", "武", "器", "技", "能", "衝", "刺", "爆", "◆", "◇"]
 
 func _init() -> void:
     call_deferred("_run")
@@ -89,18 +90,31 @@ func _run() -> void:
     var ui_root := scene.get_node("MobileUI/Root")
     var attack := ui_root.get_node_or_null("AttackButton") as Button
     var gem := ui_root.get_node_or_null("GemButton") as Button
+    var equipment := ui_root.get_node_or_null("EquipmentButton") as Button
+    var skill0 := ui_root.get_node_or_null("SkillButton0") as Button
+    var skill1 := ui_root.get_node_or_null("SkillButton1") as Button
+    var skill2 := ui_root.get_node_or_null("SkillButton2") as Button
     var hint := ui_root.get_node_or_null("Hint") as Label
-    if attack == null or gem == null or hint == null:
-        _fail("Mobile/desktop UI did not mount")
+    if attack == null or gem == null or equipment == null or skill0 == null or skill1 == null or skill2 == null or hint == null:
+        _fail("Weapon/skill mobile+desktop UI did not mount")
         return
-    if attack.text != "攻擊" or gem.text != "寶石":
+    if attack.text != "攻擊" or gem.text != "寶石" or equipment.text != "裝備":
         _fail("Traditional Chinese controls changed unexpectedly")
         return
-    if not hint.text.contains("WASD") or not hint.text.contains("按住左鍵"):
-        _fail("Desktop hold-to-fire controls are not documented")
+    if not hint.text.contains("WASD") or not hint.text.contains("1/2/3"):
+        _fail("Desktop weapon/skill controls are not documented")
         return
     if ui_root.theme == null or ui_root.theme.default_font != imported_font:
         _fail("Shared imported Traditional Chinese theme is not active")
+        return
+
+    var weapon: Dictionary = scene.call("debug_weapon_state")
+    if String(weapon.get("weapon_type", "")) != "bow" or float(weapon.get("damage", 0.0)) <= 0.0:
+        _fail("Starter weapon is not active")
+        return
+    var skill_ids: Array = scene.call("debug_skill_ids")
+    if skill_ids != ["weapon_skill", "burst", "rift_dash"]:
+        _fail("Playable skill catalog is incomplete")
         return
 
     var before_mobile := enemy_label.text
@@ -138,6 +152,33 @@ func _run() -> void:
         _fail("Desktop cursor-targeted projectile did not damage its target")
         return
 
+    var skill_enemy := enemies.get_child(0) as CharacterBody3D
+    skill_enemy.position = Vector3(3.0, 0.0, 0.0)
+    scene.call("_use_skill", 0)
+    await process_frame
+    var cds: Array = scene.call("debug_skill_cooldowns")
+    if cds.size() != 3 or float(cds[0]) <= 0.0:
+        _fail("Weapon skill did not enter cooldown")
+        return
+    if int(scene.call("debug_projectile_count")) < 1:
+        _fail("Ranged weapon skill did not spawn pooled projectiles")
+        return
+
+    scene.call("debug_add_test_weapon", "blade")
+    if int(scene.call("debug_weapon_inventory_count")) < 2:
+        _fail("Weapon inventory did not accept a picked weapon")
+        return
+    scene.call("_equip_weapon_index", 1)
+    var blade: Dictionary = scene.call("debug_weapon_state")
+    if String(blade.get("weapon_type", "")) != "blade" or not skill0.text.contains("旋刃"):
+        _fail("Equipping a blade did not change the active weapon skill")
+        return
+
+    var starter := WeaponSkillSystem.starter_weapon()
+    if float(starter.get("range", 0.0)) < 10.0 or float(starter.get("cooldown", 0.0)) <= 0.0:
+        _fail("Weapon stat normalization failed")
+        return
+
     scene.call("debug_force_loot_drop")
     await process_frame
     if int(scene.call("debug_loot_count")) < 1:
@@ -148,5 +189,5 @@ func _run() -> void:
         _fail("Dynamic weighted loot/affix record is incomplete")
         return
 
-    print("RIFTFORGED_V2_SMOKE_OK perf2/pools/staggered-ai/hierarchical-loot/mobile+desktop ready")
+    print("RIFTFORGED_V2_SMOKE_OK perf2/weapon-inventory/3-skills/pools/loot/mobile+desktop ready")
     quit(0)
