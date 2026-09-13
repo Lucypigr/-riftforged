@@ -1,4 +1,4 @@
-export const PORTRAIT_EXTRA_SCALE = 0.80;
+export const PORTRAIT_EXTRA_SCALE = 0.70;
 
 export function portraitExtraScaleForView(view){
   return view?.h > view?.w ? PORTRAIT_EXTRA_SCALE : 1;
