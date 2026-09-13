@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0 — 2026-09-13
+- Added an original PoE-inspired linked gem system using the existing JavaScript ES-module architecture.
+- Added a free eight-socket matrix with two linked groups plus one unlinked utility socket.
+- Added red/green/blue active, support and aura gems with touch/click installation.
+- Support gems work only when linked to the currently selected active gem; aura gems work without links.
+- Added real projectile chain, extra projectile, pierce, damage, attack-speed, crit and regeneration gem effects.
+- Added 5% normal-enemy gem drops and a much higher boss gem-drop chance.
+- Added glowing ground gem drops with proximity auto-pickup and gem loot notifications.
+- Added automated tests for linked support, unlinked support, aura behavior and duplicate gem installation.
+
 ## 0.3.0 — 2026-09-13
 - Added a true pseudo-isometric 2.5D rendering mode while preserving the existing gameplay rules.
 - Remapped desktop/mobile movement so controls remain screen-relative under the isometric projection.
