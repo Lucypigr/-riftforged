@@ -6,21 +6,37 @@
 - Grim Dawn database/tooling analysis is available as structural reference; use its data-driven separation ideas rather than copying game content.
 - User wants a PoE-style linked gem feel: physical socket/link decisions, touch-friendly installation, ground gem drops and build-changing support behavior.
 - User wants playable results early, then iterative optimization.
+- User accepted the first Godot/iPhone prototype and wants development to continue with ChatGPT handling implementation/testing while the iPhone is used for real-device feel testing.
 
-## Current prototype defaults
-- 2D top-down gameplay with pseudo-isometric 2.5D presentation.
-- Web first, using dependency-free JavaScript ES modules + Canvas 2D.
-- Desktop + mobile input from the first version.
-- GitHub repository is the canonical project source.
+## Current platform strategy
+- Keep the existing JavaScript/Canvas build as the stable comparison build at the GitHub Pages root.
+- Continue a parallel Godot 4.7.2 version under `/godot-test/` while systems are migrated and compared on iPhone.
+- Godot uses a true 3D scene with orthographic Camera3D + billboard-style 2.5D actors, Compatibility rendering and portrait-first controls.
+- GitHub repository remains the canonical project source; feature branches are validated by CI before merging.
 
-## Gem + socket prototype status
-- Feature branch: `feature/poe-style-gems`.
-- Pull request: #7.
-- Starter state now uses a temporary four-link Rift Base rather than the old eight-socket free matrix.
-- Dropped weapons/armor roll socket/link layouts; rarity controls the available 2–6 socket range.
-- Gem UI can select socket-providing equipment from the player's inventory. Switching socket gear safely returns installed gems to the gem stash before rebuilding sockets.
-- Active/support/aura gems use linked-group compatibility.
-- Real gameplay transformations include chain, multi-projectile, pierce, splash, fork, projectile reach, damage/speed trade-offs, crit and regeneration.
-- Normal enemies use a 5% gem-drop chance; bosses use a much higher chance.
-- A headless real-browser smoke test was added using Chrome/Chromium DevTools Protocol to validate boot, gem UI interaction and a mobile viewport without adding runtime dependencies.
-- Earlier Node/syntax CI passed for the linked-gem version. The newest equipment-socket/browser-smoke revision must not be merged until its latest CI run completes successfully.
+## JavaScript prototype status
+- Current JS build already has linked gems, equipment-driven socket layouts, ground loot, portrait HUD work and browser smoke testing.
+- It remains useful as a rules/reference implementation while the Godot version catches up.
+
+## Godot prototype status
+- First mobile prototype has already been merged to `main` and deployed to `/godot-test/`.
+- Current development branch: `feature/godot-gem-combat`.
+- Combat now uses multiple simultaneous enemies plus elite enemies, continuous respawning, player HP, contact damage and death/respawn.
+- Godot now has a touch-friendly four-link gem panel and gem stash.
+- Ported active/support behaviors include damage scaling, extra projectiles, chain, pierce, splash, fork, attack speed and projectile reach/lifetime.
+- Projectiles auto-target the nearest enemy and carry their current gem-derived behavior through hit handling.
+- Normal enemies use a 5% gem-drop chance; elite prototype enemies use a higher 35% chance.
+- Glowing gem drops exist physically in the world and are collected by proximity; a starter pickup is placed near spawn so iPhone testing can verify pickup immediately.
+- UI currently shows HP, kills and active linked-build summary.
+- The scene intentionally still uses procedural placeholder actor visuals; higher-quality character art/sprites should be added after the gameplay/camera/mobile interaction loop is stable.
+
+## Validation rules
+- Godot feature changes must pass project import, headless scene smoke test and Web export in GitHub Actions.
+- The Godot smoke test currently verifies core nodes, orthographic KEEP_WIDTH camera behavior, an initial enemy pack, gem UI presence and linked-chain support behavior.
+- Do not replace the stable root JS build with Godot until the Godot version has reached comparable gameplay coverage and has been repeatedly tested on iPhone.
+
+## Next implementation targets
+- Add better 2.5D character/enemy artwork and animation without giving up the current true-3D ground/camera setup.
+- Port equipment drops/inventory and socket-bearing gear into Godot.
+- Add boss encounters and stronger loot feedback.
+- Split the growing Godot prototype script into dedicated combat, gem, loot, enemy and UI systems as the port matures.

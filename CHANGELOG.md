@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.0 — 2026-09-13
+- Continued the parallel Godot 4.7.2 mobile prototype after the first iPhone test was accepted.
+- Expanded the Godot scene from a single target into a small combat pack with normal and elite Rift beasts, contact damage, player HP, death/respawn and continuous enemy replacement.
+- Ported the first linked-gem combat slice into Godot with a touch-friendly four-link panel and gem stash.
+- Added Godot versions of crimson/green/blue active and support gems for damage, multishot, chain, pierce, splash, fork, haste and projectile reach/lifetime.
+- Added nearest-target projectile combat with real multishot, chain redirection, pierce, fork children and splash damage interactions.
+- Added glowing physical gem drops, proximity auto-pickup and a starter world pickup so mobile testing can verify the loot loop immediately.
+- Added a richer prototype battlefield path, extra props, character/enemy ground shadows and a compact HP/build HUD.
+- Extended the Godot headless smoke test to validate enemy packs, loot/UI nodes and linked chain support behavior.
+- Godot CI now validates project import, headless gameplay smoke and Web export before the prototype is deployed.
+
 ## 0.4.0 — 2026-09-13
 - Added an original PoE-inspired linked gem system using the existing JavaScript ES-module architecture.
 - Replaced the temporary eight-socket free matrix with a four-link starter base plus equipment-driven socket layouts.

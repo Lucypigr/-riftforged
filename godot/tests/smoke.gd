@@ -9,12 +9,13 @@ func _run() -> void:
         push_error("Unable to load main.tscn")
         quit(1)
         return
+
     var scene := packed.instantiate()
     root.add_child(scene)
     await process_frame
     await process_frame
 
-    var required := ["Player", "Enemy", "MobileUI", "Ground"]
+    var required := ["Player", "Enemies", "Loot", "MobileUI", "Ground"]
     for path in required:
         if scene.get_node_or_null(path) == null:
             push_error("Missing required node: %s" % path)
@@ -32,5 +33,34 @@ func _run() -> void:
         quit(1)
         return
 
-    print("GODOT_SMOKE_OK player/enemy/ui/camera ready")
+    var enemies_node := scene.get_node("Enemies")
+    if enemies_node.get_child_count() < 5:
+        push_error("Expected an initial combat pack")
+        quit(1)
+        return
+
+    var ui := scene.get_node("MobileUI")
+    if ui.get_node_or_null("GemButton") == null or ui.get_node_or_null("GemPanel") == null:
+        push_error("Gem UI did not mount")
+        quit(1)
+        return
+
+    var before: Dictionary = scene.call("debug_build_profile")
+    if int(before.get("chain", -1)) != 0:
+        push_error("Starter build unexpectedly has chain")
+        quit(1)
+        return
+
+    scene.call("debug_install_gem", "verdant_chain", 1)
+    var after: Dictionary = scene.call("debug_build_profile")
+    if int(after.get("chain", 0)) != 1:
+        push_error("Linked chain support did not modify the active gem")
+        quit(1)
+        return
+    if String(after.get("active_id", "")) != "crimson_bolt":
+        push_error("Starter active gem changed unexpectedly")
+        quit(1)
+        return
+
+    print("GODOT_SMOKE_OK player/enemies/loot/ui/camera/gem-link ready")
     quit(0)
