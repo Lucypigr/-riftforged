@@ -10,7 +10,7 @@
 - Added a richer prototype battlefield path, extra props, character/enemy ground shadows and a compact HP/build HUD.
 - Extended the Godot headless smoke test to validate enemy packs, loot/UI nodes and linked chain support behavior.
 - Godot CI now validates project import, headless gameplay smoke and Web export before the prototype is deployed.
-- Replaced the temporary English Web text rewriter with a bundled Traditional Chinese bitmap font so iPhone/Safari keeps Chinese UI without periodic text flicker.
+- Removed the temporary English Web text rewriter and the custom BMFont/SVG workaround; the Godot prototype now loads a real OFL-licensed Noto Sans TC TrueType font directly and applies it through a shared Theme/Label3D font path.
 
 ## 0.4.0 — 2026-09-13
 - Added an original PoE-inspired linked gem system using the existing JavaScript ES-module architecture.
