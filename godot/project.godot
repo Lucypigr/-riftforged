@@ -7,7 +7,7 @@ config/name="Riftforged Godot Prototype"
 run/main_scene="res://main.tscn"
 
 [autoload]
-WebTextFallback="*res://scripts/web_text_fallback.gd"
+ChineseFontRuntime="*res://scripts/chinese_font_runtime.gd"
 
 [display]
 window/size/viewport_width=390
