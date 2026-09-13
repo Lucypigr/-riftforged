@@ -2,6 +2,8 @@ extends Node3D
 
 const MobileUIScript = preload("res://scripts/mobile_ui.gd")
 const FontServiceScript = preload("res://scripts/font_service.gd")
+const PLAYER_TEXTURE = preload("res://art/player_ranger.svg")
+const ENEMY_TEXTURE = preload("res://art/rift_beast.svg")
 
 const PLAYER_SPEED := 6.2
 const ENEMY_SPEED := 2.0
@@ -10,10 +12,13 @@ const MAX_ENEMIES := 5
 const ATTACK_RANGE := 11.5
 const ATTACK_DAMAGE := 28.0
 const ATTACK_COOLDOWN := 0.36
+const PROJECTILE_TRAVEL_TIME := 0.28
 
 var player: CharacterBody3D
+var player_visual: Sprite3D
 var camera: Camera3D
 var enemies_root: Node3D
+var projectiles_root: Node3D
 var ui: RiftMobileUI
 var ui_font: FontFile
 var enemies: Array[Dictionary] = []
@@ -34,6 +39,7 @@ func _ready() -> void:
     _build_world()
     _build_player()
     _build_enemies_root()
+    _build_projectiles_root()
     _build_ui()
     for i in range(MAX_ENEMIES):
         _spawn_enemy(i == MAX_ENEMIES - 1)
@@ -122,6 +128,7 @@ func _build_player() -> void:
     player.add_child(collision)
 
     var shadow := MeshInstance3D.new()
+    shadow.name = "Shadow"
     var shadow_mesh := CylinderMesh.new()
     shadow_mesh.top_radius = 0.58
     shadow_mesh.bottom_radius = 0.58
@@ -134,27 +141,14 @@ func _build_player() -> void:
     shadow.material_override = shadow_mat
     player.add_child(shadow)
 
-    var body := MeshInstance3D.new()
-    body.name = "Body"
-    var body_mesh := CapsuleMesh.new()
-    body_mesh.radius = 0.42
-    body_mesh.height = 1.55
-    body.mesh = body_mesh
-    body.position.y = 0.78
-    var body_mat := StandardMaterial3D.new()
-    body_mat.albedo_color = Color(0.74, 0.80, 0.96)
-    body.material_override = body_mat
-    player.add_child(body)
-
-    var accent := MeshInstance3D.new()
-    var accent_mesh := BoxMesh.new()
-    accent_mesh.size = Vector3(0.5, 0.58, 0.18)
-    accent.mesh = accent_mesh
-    accent.position = Vector3(0, 0.88, -0.38)
-    var accent_mat := StandardMaterial3D.new()
-    accent_mat.albedo_color = Color(0.78, 0.16, 0.20)
-    accent.material_override = accent_mat
-    player.add_child(accent)
+    player_visual = Sprite3D.new()
+    player_visual.name = "Visual"
+    player_visual.texture = PLAYER_TEXTURE
+    player_visual.pixel_size = 0.0072
+    player_visual.position.y = 1.15
+    player_visual.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+    player_visual.shaded = false
+    player.add_child(player_visual)
 
     camera = Camera3D.new()
     camera.name = "Camera3D"
@@ -170,6 +164,11 @@ func _build_enemies_root() -> void:
     enemies_root = Node3D.new()
     enemies_root.name = "Enemies"
     add_child(enemies_root)
+
+func _build_projectiles_root() -> void:
+    projectiles_root = Node3D.new()
+    projectiles_root.name = "Projectiles"
+    add_child(projectiles_root)
 
 func _build_ui() -> void:
     ui = MobileUIScript.new()
@@ -197,23 +196,22 @@ func _spawn_enemy(elite: bool = false) -> void:
     collision.position.y = 0.82
     enemy.add_child(collision)
 
-    var visual := MeshInstance3D.new()
+    var visual := Sprite3D.new()
     visual.name = "Visual"
-    var mesh := CapsuleMesh.new()
-    mesh.radius = 0.52 if elite else 0.44
-    mesh.height = 1.7 if elite else 1.5
-    visual.mesh = mesh
-    visual.position.y = 0.82
-    var mat := StandardMaterial3D.new()
-    mat.albedo_color = Color(0.90, 0.38, 0.17) if elite else Color(0.54, 0.22, 0.68)
-    visual.material_override = mat
+    visual.texture = ENEMY_TEXTURE
+    visual.pixel_size = 0.0082 if elite else 0.0072
+    visual.position.y = 1.31 if elite else 1.15
+    visual.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+    visual.shaded = false
+    if elite:
+        visual.modulate = Color(1.0, 0.78, 0.48)
     enemy.add_child(visual)
 
     var max_hp := 110.0 if elite else 60.0
     var label := Label3D.new()
     label.name = "NameLabel"
     label.text = "菁英裂隙獸 %d" % int(max_hp) if elite else "裂隙獸 %d" % int(max_hp)
-    label.position = Vector3(0, 2.25, 0)
+    label.position = Vector3(0, 2.75 if elite else 2.5, 0)
     label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
     label.font = ui_font
     label.font_size = 28
@@ -224,6 +222,7 @@ func _spawn_enemy(elite: bool = false) -> void:
     enemies.append({
         "id": enemy_serial,
         "node": enemy,
+        "visual": visual,
         "label": label,
         "hp": max_hp,
         "max_hp": max_hp,
@@ -253,6 +252,8 @@ func _physics_process(delta: float) -> void:
     player.move_and_slide()
     player.position.x = clampf(player.position.x, -WORLD_LIMIT, WORLD_LIMIT)
     player.position.z = clampf(player.position.z, -WORLD_LIMIT, WORLD_LIMIT)
+    if player_visual != null and absf(input_vector.x) > 0.05:
+        player_visual.flip_h = input_vector.x < 0.0
 
     _update_enemies(delta)
 
@@ -267,6 +268,9 @@ func _update_enemies(delta: float) -> void:
         entry["touch_cd"] = maxf(0.0, float(entry["touch_cd"]) - delta)
         var to_player := player.global_position - enemy.global_position
         to_player.y = 0
+        var visual := entry["visual"] as Sprite3D
+        if visual != null and absf(to_player.x) > 0.05:
+            visual.flip_h = to_player.x > 0.0
         if to_player.length() > 1.18:
             enemy.velocity = to_player.normalized() * ENEMY_SPEED * (1.08 if bool(entry["elite"]) else 1.0)
             enemy.move_and_slide()
@@ -292,11 +296,72 @@ func _attack() -> void:
         return
 
     attack_cooldown = ATTACK_COOLDOWN
+    _spawn_projectile(int(entry["id"]), enemy)
+
+func _spawn_projectile(enemy_id: int, target: CharacterBody3D) -> void:
+    if projectiles_root == null or not is_instance_valid(target):
+        return
+
+    var projectile := Node3D.new()
+    projectile.name = "RiftBolt_%d" % enemy_id
+    projectile.global_position = player.global_position + Vector3(0, 1.02, 0)
+    projectiles_root.add_child(projectile)
+
+    var core := MeshInstance3D.new()
+    core.name = "Core"
+    var core_mesh := SphereMesh.new()
+    core_mesh.radius = 0.18
+    core_mesh.height = 0.36
+    core.mesh = core_mesh
+    var core_mat := StandardMaterial3D.new()
+    core_mat.albedo_color = Color(1.0, 0.72, 0.22)
+    core_mat.emission_enabled = true
+    core_mat.emission = Color(1.0, 0.30, 0.05)
+    core_mat.emission_energy_multiplier = 3.2
+    core_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    core.material_override = core_mat
+    projectile.add_child(core)
+
+    var aura := MeshInstance3D.new()
+    aura.name = "Aura"
+    var aura_mesh := SphereMesh.new()
+    aura_mesh.radius = 0.31
+    aura_mesh.height = 0.62
+    aura.mesh = aura_mesh
+    var aura_mat := StandardMaterial3D.new()
+    aura_mat.albedo_color = Color(1.0, 0.38, 0.06, 0.22)
+    aura_mat.emission_enabled = true
+    aura_mat.emission = Color(1.0, 0.18, 0.02)
+    aura_mat.emission_energy_multiplier = 1.7
+    aura_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    aura_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    aura.material_override = aura_mat
+    projectile.add_child(aura)
+
+    var destination := target.global_position + Vector3(0, 0.95, 0)
+    var tween := create_tween()
+    tween.set_trans(Tween.TRANS_QUAD)
+    tween.set_ease(Tween.EASE_IN)
+    tween.tween_property(projectile, "global_position", destination, PROJECTILE_TRAVEL_TIME)
+    tween.tween_callback(_resolve_projectile_hit.bind(enemy_id, projectile))
+
+func _resolve_projectile_hit(enemy_id: int, projectile: Node3D) -> void:
+    if is_instance_valid(projectile):
+        projectile.queue_free()
+
+    var index := _enemy_index_by_id(enemy_id)
+    if index < 0:
+        return
+    var entry: Dictionary = enemies[index]
+    var enemy := entry["node"] as CharacterBody3D
+    if not is_instance_valid(enemy):
+        return
+
     entry["hp"] = maxf(0.0, float(entry["hp"]) - ATTACK_DAMAGE)
     var label := entry["label"] as Label3D
     var prefix := "菁英裂隙獸" if bool(entry["elite"]) else "裂隙獸"
     label.text = "%s %d" % [prefix, int(entry["hp"])]
-    _spawn_hit_flash(enemy.global_position + Vector3(0, 0.9, 0))
+    _spawn_hit_flash(enemy.global_position + Vector3(0, 0.95, 0))
 
     if float(entry["hp"]) <= 0:
         var was_elite := bool(entry["elite"])
@@ -307,6 +372,12 @@ func _attack() -> void:
         _spawn_enemy(was_elite if kills % 7 == 0 else false)
     else:
         enemies[index] = entry
+
+func _enemy_index_by_id(enemy_id: int) -> int:
+    for i in range(enemies.size()):
+        if int(enemies[i]["id"]) == enemy_id:
+            return i
+    return -1
 
 func _nearest_enemy_index() -> int:
     var best := -1
@@ -353,3 +424,6 @@ func debug_font() -> FontFile:
 
 func debug_enemy_count() -> int:
     return enemies.size()
+
+func debug_projectile_count() -> int:
+    return projectiles_root.get_child_count() if projectiles_root != null else 0
