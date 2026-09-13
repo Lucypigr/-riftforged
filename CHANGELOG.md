@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.0 — 2026-09-14
+- Added the first fully playable weapon/equipment loop to Godot V2: picked weapons are stored, shown in a weapon panel and can be equipped directly.
+- Added three distinct weapon archetypes: bows use long-range rapid projectiles, blades use short-range melee hits, and focuses use slower high-damage ranged attacks.
+- Weapon affixes now affect real combat values for damage, attack speed, flat elemental damage and critical chance instead of being display-only loot text.
+- Added three active combat skills with mobile buttons and desktop hotkeys 1/2/3: a weapon-specific multi-hit skill, an explosive AoE attack, and Rift Dash movement.
+- The first skill changes behavior with the equipped weapon: bow/focus fires a multi-projectile attack while blades perform a circular melee strike.
+- Added a gameplay HUD weapon readout, skill cooldown display, equipment button and weapon inventory panel while preserving the existing gem button and mobile controls.
+- Kept the Web performance work active underneath the new gameplay layer, including projectile/effect pools, staggered AI decisions, label culling and capped ground loot.
+- Extended Godot smoke coverage to verify the starter weapon, equipment UI, skill catalog, active skill cooldowns, pooled skill projectiles and weapon-type switching.
+
 ## 0.5.1 — 2026-09-14
 - Added a second Godot Web performance pass for the 2.5D ARPG runtime.
 - Prewarmed and reused player/enemy projectile nodes plus hit-flash nodes to reduce browser allocation/GC spikes during sustained combat.
