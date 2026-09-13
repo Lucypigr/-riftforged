@@ -46,15 +46,24 @@ jobs:
           use-dotnet: false
           include-templates: true
 
-      - name: Build static site and Godot prototype
+      - name: Build static site and Godot prototypes
         run: |
           mkdir -p _site
           cp index.html styles.css _site/
           cp -R src assets _site/
+
           mkdir -p _site/godot-test
           godot --headless --path godot --import --quit
           godot --headless --path godot --export-release "Web" "$GITHUB_WORKSPACE/_site/godot-test/index.html"
           test -f _site/godot-test/index.html
+
+          mkdir -p _site/godot-v2
+          python3 godot_v2/tools/prepare_font.py --project godot_v2
+          test "$(head -c 4 godot_v2/fonts/NotoSansCJKtc-Regular.otf)" = "OTTO"
+          godot --headless --path godot_v2 --import --quit
+          godot --headless --path godot_v2 --script res://tests/smoke.gd
+          godot --headless --path godot_v2 --export-release "Web" "$GITHUB_WORKSPACE/_site/godot-v2/index.html"
+          test -f _site/godot-v2/index.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

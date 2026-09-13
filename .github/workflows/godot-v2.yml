@@ -1,0 +1,52 @@
+name: Godot V2 Clean Rebuild CI
+
+on:
+  push:
+    paths:
+      - 'godot_v2/**'
+      - '.github/workflows/godot-v2.yml'
+      - '.github/workflows/pages.yml'
+  pull_request:
+    paths:
+      - 'godot_v2/**'
+      - '.github/workflows/godot-v2.yml'
+      - '.github/workflows/pages.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Godot 4.7.2
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.7.2
+          use-dotnet: false
+          include-templates: true
+
+      - name: Prepare static Traditional Chinese font
+        run: |
+          python3 godot_v2/tools/prepare_font.py --project godot_v2
+          test "$(head -c 4 godot_v2/fonts/NotoSansCJKtc-Regular.otf)" = "OTTO"
+          test "$(stat -c%s godot_v2/fonts/NotoSansCJKtc-Regular.otf)" -gt 10000000
+
+      - name: Import clean rebuild
+        run: godot --headless --path godot_v2 --import --quit
+
+      - name: Headless clean-rebuild smoke test
+        run: godot --headless --path godot_v2 --script res://tests/smoke.gd
+
+      - name: Export Web build
+        run: |
+          rm -rf "$GITHUB_WORKSPACE/godot-v2-web"
+          mkdir -p "$GITHUB_WORKSPACE/godot-v2-web"
+          godot --headless --path godot_v2 --export-release "Web" "$GITHUB_WORKSPACE/godot-v2-web/index.html"
+
+      - name: Verify Web export files
+        run: |
+          test -f godot-v2-web/index.html
+          test -n "$(find godot-v2-web -maxdepth 1 -name '*.wasm' -print -quit)"
+          test -n "$(find godot-v2-web -maxdepth 1 -name '*.pck' -print -quit)"
+          ls -lh godot-v2-web
