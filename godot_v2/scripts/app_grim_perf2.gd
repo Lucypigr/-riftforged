@@ -240,7 +240,9 @@ func debug_projectile_count() -> int:
     return active
 
 func debug_perf_pass2() -> Dictionary:
-    var pool_stats := {} if _combat_pool == null else _combat_pool.stats()
+    var pool_stats: Dictionary = {}
+    if _combat_pool != null:
+        pool_stats = _combat_pool.stats()
     return {
         "ai_phases": AI_PHASES,
         "loot_cap": MAX_GROUND_LOOT,
