@@ -13,12 +13,14 @@
 - Desktop + mobile input from the first version.
 - GitHub repository is the canonical project source.
 
-## Gem prototype status
+## Gem + socket prototype status
 - Feature branch: `feature/poe-style-gems`.
 - Pull request: #7.
-- Eight-socket free matrix currently used as a stable prototype topology.
-- Active/support/aura gems implemented with linked-group compatibility.
+- Starter state now uses a temporary four-link Rift Base rather than the old eight-socket free matrix.
+- Dropped weapons/armor roll socket/link layouts; rarity controls the available 2–6 socket range.
+- Gem UI can select socket-providing equipment from the player's inventory. Switching socket gear safely returns installed gems to the gem stash before rebuilding sockets.
+- Active/support/aura gems use linked-group compatibility.
 - Real gameplay transformations include chain, multi-projectile, pierce, splash, fork, projectile reach, damage/speed trade-offs, crit and regeneration.
 - Normal enemies use a 5% gem-drop chance; bosses use a much higher chance.
-- Feature-branch/PR CI runs Node tests and JavaScript syntax checks and is passing.
-- Next planned system step: move socket count/link topology from the fixed matrix into dropped build equipment while safely returning displaced gems to the stash.
+- A headless real-browser smoke test was added using Chrome/Chromium DevTools Protocol to validate boot, gem UI interaction and a mobile viewport without adding runtime dependencies.
+- Earlier Node/syntax CI passed for the linked-gem version. The newest equipment-socket/browser-smoke revision must not be merged until its latest CI run completes successfully.
