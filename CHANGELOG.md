@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.4 — 2026-09-14
+- Mobile phones now switch to the same 1280×720 desktop battlefield/HUD profile when the browser is rotated to landscape instead of keeping the old narrow portrait canvas centered on screen.
+- Landscape mobile uses the desktop camera framing, life/mana orbs and action dock while keeping compact touch joystick/attack overlays so the game remains playable without a keyboard or mouse.
+- Rotating back to portrait restores the original 390×844 mobile profile and camera automatically.
+
 ## 0.6.3 — 2026-09-14
 - Fixed the desktop life/mana orbs appearing uncolored in Web/Compatibility rendering by replacing the custom CanvasItem shader with deterministic canvas-drawn circular liquid fills.
 - Strengthened the orb colors so life renders clearly red and mana clearly blue while preserving live fill levels and numeric values.
