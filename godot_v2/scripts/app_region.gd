@@ -5,6 +5,7 @@ const RegionMapOverlayScript = preload("res://scripts/region_map_overlay.gd")
 
 var region_map: RiftRegionMap
 var region_map_overlay: RiftRegionMapOverlay
+var _terrain_visibility_stabilized := false
 
 func _ready() -> void:
     super._ready()
@@ -39,7 +40,44 @@ func _build_world() -> void:
     region_map = RegionMapScript.new()
     add_child(region_map)
     region_map.build()
+    _stabilize_region_surface_materials()
     region_map.exit_reached.connect(_on_region_exit_reached)
+
+# The procedural terrain/road triangles are generated at runtime. On the Web
+# Compatibility renderer a back-facing procedural surface can be culled before
+# its vertex colour ever reaches the screen, which looks exactly like a black
+# ground because only the dark world background remains. Terrain and road are
+# deliberately two-sided and unshaded: their authored vertex/albedo colours are
+# now renderer-independent while props/enemies keep normal scene lighting.
+func _stabilize_region_surface_materials() -> void:
+    _terrain_visibility_stabilized = false
+    if region_map == null:
+        return
+    var chunk_root := region_map.get_node_or_null("TerrainChunks")
+    if chunk_root == null:
+        return
+
+    var terrain_fixed := false
+    var road_fixed := false
+    for chunk in chunk_root.get_children():
+        for child in chunk.get_children():
+            var mesh_instance := child as MeshInstance3D
+            if mesh_instance == null or mesh_instance.mesh == null or mesh_instance.mesh.get_surface_count() < 1:
+                continue
+            var material := mesh_instance.mesh.surface_get_material(0) as BaseMaterial3D
+            if material == null:
+                continue
+            var node_name := String(mesh_instance.name)
+            if node_name.begins_with("Terrain_"):
+                material.cull_mode = BaseMaterial3D.CULL_DISABLED
+                material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+                terrain_fixed = true
+            elif node_name.begins_with("Road_"):
+                material.cull_mode = BaseMaterial3D.CULL_DISABLED
+                material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+                road_fixed = true
+
+    _terrain_visibility_stabilized = terrain_fixed and road_fixed
 
 func _build_player() -> void:
     super._build_player()
@@ -197,6 +235,7 @@ func debug_region_state() -> Dictionary:
         "chunk_loaded": int(streaming.get("loaded", 0)),
         "chunk_length": float(streaming.get("chunk_length", 0.0)),
         "terrain_spawn_luminance": float(terrain_visual.get("spawn_luminance", 0.0)),
+        "terrain_visibility_stabilized": _terrain_visibility_stabilized,
     }
 
 func debug_streaming_state() -> Dictionary:
