@@ -154,36 +154,131 @@ func _layout() -> void:
     if root_control == null or equipment_button == null:
         return
 
-    if fullscreen_button != null: fullscreen_button.visible = desktop_mode
-    if bottom_hud != null: bottom_hud.visible = desktop_mode
-    if action_dock != null: action_dock.visible = desktop_mode
-    if life_orb != null: life_orb.visible = desktop_mode
-    if mana_orb != null: mana_orb.visible = desktop_mode
-    if basic_attack_slot != null: basic_attack_slot.visible = desktop_mode
-    for flask in flask_buttons: flask.visible = desktop_mode
+    var size := get_viewport().get_visible_rect().size
+    if fullscreen_button != null:
+        fullscreen_button.visible = desktop_mode
+    if life_orb != null:
+        life_orb.visible = true
+    if mana_orb != null:
+        mana_orb.visible = true
+    if bottom_hud != null:
+        bottom_hud.visible = true
+    if action_dock != null:
+        action_dock.visible = true
+    if basic_attack_slot != null:
+        basic_attack_slot.visible = desktop_mode
+    for flask in flask_buttons:
+        flask.visible = desktop_mode
 
     if not desktop_mode:
-        if joystick_back != null: joystick_back.visible = true
-        if attack_button != null: attack_button.visible = true
-        if status_label != null: status_label.visible = true
-        if hp_bar != null: hp_bar.visible = true
+        _layout_mobile_portrait(size)
         return
 
-    var size := get_viewport().get_visible_rect().size
-    if joystick_back != null: joystick_back.visible = false
-    if attack_button != null: attack_button.visible = false
-    if status_label != null: status_label.visible = false
-    if hp_bar != null: hp_bar.visible = false
+    _layout_desktop(size)
+
+func _apply_skill_frame_styles(mobile: bool) -> void:
+    var skill_fills := [Color(0.035, 0.105, 0.085, 0.99), Color(0.18, 0.055, 0.035, 0.99), Color(0.055, 0.065, 0.18, 0.99)]
+    var skill_borders := [Color(0.26, 0.65, 0.49), Color(0.80, 0.35, 0.17), Color(0.36, 0.43, 0.90)]
+    for i in range(skill_buttons.size()):
+        var skill := skill_buttons[i]
+        skill.visible = true
+        skill.z_index = 5
+        skill.add_theme_constant_override("icon_max_width", 34 if mobile else 42)
+        skill.add_theme_font_size_override("font_size", 11 if mobile else 14)
+        skill.add_theme_stylebox_override("normal", _forged_style(skill_fills[i], skill_borders[i], 12, 2))
+        skill.add_theme_stylebox_override("hover", _forged_style(skill_fills[i].lightened(0.12), skill_borders[i].lightened(0.18), 12, 2))
+        skill.add_theme_stylebox_override("pressed", _forged_style(skill_fills[i].lightened(0.22), Color(0.92, 0.78, 0.48), 12, 2))
+        skill.add_theme_stylebox_override("disabled", _forged_style(Color(0.035, 0.038, 0.050, 0.97), Color(0.22, 0.22, 0.25), 12, 1))
+
+func _layout_mobile_portrait(size: Vector2) -> void:
+    if joystick_back != null:
+        joystick_back.visible = true
+        joystick_back.size = Vector2(116, 116)
+        joystick_back.position = Vector2(16, size.y - 142)
+        joystick_center = joystick_back.position + joystick_back.size * 0.5
+        _set_knob(movement)
+    if attack_button != null:
+        attack_button.visible = true
+        attack_button.size = Vector2(92, 92)
+        attack_button.position = Vector2(size.x - 108, size.y - 128)
+        attack_button.add_theme_font_size_override("font_size", 17)
+    if status_label != null:
+        status_label.visible = false
+    if hp_bar != null:
+        hp_bar.visible = false
+
+    title_label.position = Vector2(14, 14)
+    title_label.size = Vector2(size.x - 188, 28)
+    title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+    title_label.add_theme_font_size_override("font_size", 18)
+
+    equipment_button.size = Vector2(72, 38)
+    equipment_button.position = Vector2(size.x - 156, 12)
+    equipment_button.add_theme_font_size_override("font_size", 14)
+    gem_button.size = Vector2(72, 38)
+    gem_button.position = Vector2(size.x - 80, 12)
+    gem_button.add_theme_font_size_override("font_size", 14)
+
+    weapon_status.position = Vector2(14, 50)
+    weapon_status.size = Vector2(size.x - 28, 22)
+    weapon_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+    weapon_status.add_theme_font_size_override("font_size", 12)
+    hint_label.position = Vector2(14, 75)
+    hint_label.size = Vector2(size.x - 28, 38)
+    hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+    hint_label.add_theme_font_size_override("font_size", 11)
+
+    var orb_size := Vector2(92, 92)
+    life_orb.size = orb_size
+    life_orb.position = Vector2(12, 116)
+    mana_orb.size = orb_size
+    mana_orb.position = Vector2(size.x - orb_size.x - 12, 116)
+
+    bottom_hud.position = Vector2(0, size.y - 156)
+    bottom_hud.size = Vector2(size.x, 156)
+    action_dock.size = Vector2(236, 84)
+    action_dock.position = Vector2(size.x - 250, size.y - 244)
+
+    _apply_skill_frame_styles(true)
+    var skill_size := Vector2(70, 70)
+    var gap := 8.0
+    var row_width := skill_size.x * 3.0 + gap * 2.0
+    var start_x := size.x - row_width - 12.0
+    var skill_y := size.y - 237.0
+    for i in range(skill_buttons.size()):
+        skill_buttons[i].size = skill_size
+        skill_buttons[i].position = Vector2(start_x + float(i) * (skill_size.x + gap), skill_y)
+
+    var panel_width := minf(360.0, size.x - 24.0)
+    var panel_height := minf(500.0, size.y - 150.0)
+    equipment_panel.size = Vector2(panel_width, panel_height)
+    equipment_panel.position = Vector2((size.x - panel_width) * 0.5, 122.0)
+    if gem_panel != null:
+        gem_panel.size = Vector2(panel_width, panel_height)
+        gem_panel.position = Vector2((size.x - panel_width) * 0.5, 122.0)
+
+func _layout_desktop(size: Vector2) -> void:
+    if joystick_back != null:
+        joystick_back.visible = false
+    if attack_button != null:
+        attack_button.visible = false
+    if status_label != null:
+        status_label.visible = false
+    if hp_bar != null:
+        hp_bar.visible = false
 
     title_label.position = Vector2(24, 16)
     title_label.size = Vector2(330, 32)
     title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+    title_label.add_theme_font_size_override("font_size", 22)
     weapon_status.position = Vector2(24, 48)
     weapon_status.size = Vector2(minf(520.0, size.x * 0.42), 26)
     weapon_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+    weapon_status.add_theme_font_size_override("font_size", 13)
     hint_label.position = Vector2(24, 76)
     hint_label.size = Vector2(minf(620.0, size.x * 0.50), 34)
     hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+    hint_label.add_theme_font_size_override("font_size", 13)
 
     gem_button.size = Vector2(82, 42)
     gem_button.position = Vector2(size.x - 96, 16)
@@ -219,18 +314,10 @@ func _layout() -> void:
     attack_label.position = Vector2(4, 55)
     attack_label.size = Vector2(slot_size.x - 8, 22)
 
-    var skill_fills := [Color(0.035, 0.105, 0.085, 0.99), Color(0.18, 0.055, 0.035, 0.99), Color(0.055, 0.065, 0.18, 0.99)]
-    var skill_borders := [Color(0.26, 0.65, 0.49), Color(0.80, 0.35, 0.17), Color(0.36, 0.43, 0.90)]
+    _apply_skill_frame_styles(false)
     for i in range(skill_buttons.size()):
-        var skill := skill_buttons[i]
-        skill.visible = true
-        skill.z_index = 5
-        skill.size = slot_size
-        skill.position = Vector2(start_x + float(i + 1) * (slot_size.x + gap), slot_y)
-        skill.add_theme_stylebox_override("normal", _forged_style(skill_fills[i], skill_borders[i], 12, 2))
-        skill.add_theme_stylebox_override("hover", _forged_style(skill_fills[i].lightened(0.12), skill_borders[i].lightened(0.18), 12, 2))
-        skill.add_theme_stylebox_override("pressed", _forged_style(skill_fills[i].lightened(0.22), Color(0.92, 0.78, 0.48), 12, 2))
-        skill.add_theme_stylebox_override("disabled", _forged_style(Color(0.035, 0.038, 0.050, 0.97), Color(0.22, 0.22, 0.25), 12, 1))
+        skill_buttons[i].size = slot_size
+        skill_buttons[i].position = Vector2(start_x + float(i + 1) * (slot_size.x + gap), slot_y)
 
     var flask_size := Vector2(74, 70)
     var flask_x: float = life_orb.position.x + orb_size.x + 18.0
@@ -251,10 +338,12 @@ func _layout() -> void:
 
 func set_hp(current: float, maximum: float) -> void:
     super.set_hp(current, maximum)
-    if life_orb != null: life_orb.set_value(current, maximum)
+    if life_orb != null:
+        life_orb.set_value(current, maximum)
 
 func set_mana(current: float, maximum: float) -> void:
-    if mana_orb != null: mana_orb.set_value(current, maximum)
+    if mana_orb != null:
+        mana_orb.set_value(current, maximum)
 
 func set_flask_charges(charges: Array[int]) -> void:
     _flask_charges = charges.duplicate()
