@@ -101,11 +101,11 @@ func _apply_runtime_hint() -> void:
     if ui == null:
         return
     if mobile_landscape_enabled:
-        ui.set_hint("手機橫屏：桌面版視野＋介面｜左側搖桿移動｜右側攻擊／技能")
+        ui.set_hint("手機橫屏：左側搖桿移動｜右側攻擊／技能｜右上地圖")
     elif desktop_layout_enabled:
-        ui.set_hint("WASD 移動｜按住左鍵射擊｜1/2/3 技能｜右上可切換全螢幕")
+        ui.set_hint("WASD 移動｜左鍵射擊｜1/2/3 技能｜M 全地圖｜右上全螢幕")
     else:
-        ui.set_hint("手機：搖桿＋攻擊／技能｜拾取武器可直接換裝")
+        ui.set_hint("手機：搖桿＋攻擊／技能｜右上地圖｜拾取武器可直接換裝")
 
 func _apply_mobile_landscape_touch_overlay() -> void:
     var gameplay_ui := ui as RiftDesktopGameplayUI
