@@ -21,17 +21,18 @@ func _build_world() -> void:
     environment_node.name = "WorldEnvironment"
     var environment := Environment.new()
     environment.background_mode = Environment.BG_COLOR
-    environment.background_color = Color(0.018, 0.024, 0.030)
+    environment.background_color = Color(0.035, 0.045, 0.055)
     environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-    environment.ambient_light_color = Color(0.43, 0.50, 0.58)
-    environment.ambient_light_energy = 0.68
+    environment.ambient_light_color = Color(0.62, 0.68, 0.72)
+    environment.ambient_light_energy = 0.88
     environment_node.environment = environment
     add_child(environment_node)
 
     var light := DirectionalLight3D.new()
     light.name = "RegionLight"
     light.rotation_degrees = Vector3(-58, -34, 0)
-    light.light_energy = 1.08
+    light.light_color = Color(1.0, 0.94, 0.84)
+    light.light_energy = 1.22
     light.shadow_enabled = false
     add_child(light)
 
@@ -181,6 +182,7 @@ func _damage_player(amount: float) -> void:
 
 func debug_region_state() -> Dictionary:
     var streaming := region_map.streaming_state() if region_map != null else {}
+    var terrain_visual := region_map.terrain_visual_state() if region_map != null else {}
     return {
         "region": region_map.name if region_map != null else "",
         "north_edge": RiftRegionMap.NORTH_EDGE,
@@ -194,6 +196,7 @@ func debug_region_state() -> Dictionary:
         "chunk_total": int(streaming.get("chunk_total", 0)),
         "chunk_loaded": int(streaming.get("loaded", 0)),
         "chunk_length": float(streaming.get("chunk_length", 0.0)),
+        "terrain_spawn_luminance": float(terrain_visual.get("spawn_luminance", 0.0)),
     }
 
 func debug_streaming_state() -> Dictionary:
