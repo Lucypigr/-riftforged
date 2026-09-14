@@ -43,10 +43,29 @@ func _run() -> void:
     await process_frame
     await process_frame
 
-    for path in ["Player", "Enemies", "Projectiles", "Loot", "Ground", "MobileUI"]:
+    for path in ["Player", "Enemies", "Projectiles", "Loot", "MobileUI"]:
         if scene.get_node_or_null(path) == null:
             _fail("Missing required runtime node: %s" % path)
             return
+
+    if not scene.has_method("debug_region_state"):
+        _fail("Large-region runtime contract is missing")
+        return
+    var region_state: Dictionary = scene.call("debug_region_state")
+    var region_name := String(region_state.get("region", ""))
+    var region_root := scene.get_node_or_null(region_name)
+    if region_name.is_empty() or region_root == null:
+        _fail("Large playable region did not mount")
+        return
+    if region_root.get_node_or_null("Ground") == null:
+        _fail("Region terrain ground is missing from the region hierarchy")
+        return
+    var north_edge := float(region_state.get("north_edge", 0.0))
+    var south_edge := float(region_state.get("south_edge", 0.0))
+    var half_width := float(region_state.get("half_width", 0.0))
+    if south_edge - north_edge < 290.0 or half_width * 2.0 < 60.0:
+        _fail("Large playable region dimensions regressed")
+        return
 
     var perf: Dictionary = scene.call("debug_perf_pass2")
     if int(perf.get("ai_phases", 0)) != 2 or int(perf.get("loot_cap", 0)) != 24:
@@ -72,6 +91,10 @@ func _run() -> void:
         return
 
     var player := scene.get_node("Player")
+    var expected_spawn: Vector3 = region_state.get("player_spawn", Vector3.ZERO)
+    if player.global_position.distance_to(expected_spawn) > 0.25:
+        _fail("Player did not spawn at the region start")
+        return
     var camera := player.get_node_or_null("Camera3D") as Camera3D
     if camera == null or camera.projection != Camera3D.PROJECTION_ORTHOGONAL or camera.keep_aspect != Camera3D.KEEP_HEIGHT:
         _fail("Desktop landscape orthographic camera is not active")
@@ -136,7 +159,7 @@ func _run() -> void:
         return
 
     var before_mobile := enemy_label.text
-    first_enemy.position = Vector3(2.0, 0.0, 0.0)
+    first_enemy.global_position = player.global_position + Vector3(2.0, 0.0, 0.0)
     scene.call("_attack")
     await process_frame
     if int(scene.call("debug_projectile_count")) < 1:
@@ -148,7 +171,7 @@ func _run() -> void:
         _fail("Basic projectile did not damage its target")
         return
 
-    first_enemy.position = Vector3(3.0, 0.0, 0.0)
+    first_enemy.global_position = player.global_position + Vector3(3.0, 0.0, 0.0)
     var before_mouse := enemy_label.text
     var mouse_event := InputEventMouseButton.new()
     mouse_event.button_index = MOUSE_BUTTON_LEFT
@@ -171,7 +194,7 @@ func _run() -> void:
         return
 
     var skill_enemy := enemies.get_child(0) as CharacterBody3D
-    skill_enemy.position = Vector3(3.0, 0.0, 0.0)
+    skill_enemy.global_position = player.global_position + Vector3(3.0, 0.0, 0.0)
     scene.call("_use_skill", 0)
     await process_frame
     var cds: Array = scene.call("debug_skill_cooldowns")
@@ -207,5 +230,5 @@ func _run() -> void:
         _fail("Dynamic weighted loot/affix record is incomplete")
         return
 
-    print("RIFTFORGED_V2_SMOKE_OK desktop-1280x720/fullscreen/weapon-skills/pools/loot ready")
+    print("RIFTFORGED_V2_SMOKE_OK desktop-1280x720/fullscreen/weapon-skills/pools/loot/large-region ready")
     quit(0)
