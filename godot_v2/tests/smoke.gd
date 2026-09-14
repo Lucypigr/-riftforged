@@ -83,6 +83,12 @@ func _run() -> void:
     if south_edge - north_edge < 290.0 or half_width * 2.0 < 60.0:
         _fail("Large playable region dimensions regressed")
         return
+    if int(region_state.get("zones", 0)) != 6 or int(region_state.get("landmarks", 0)) < 7:
+        _fail("Region quality pass lost zones or landmarks")
+        return
+    if not bool(region_state.get("region02_exit", false)):
+        _fail("North Region 02 exit trigger is missing")
+        return
 
     _stage("perf")
     var perf: Dictionary = scene.call("debug_perf_pass2")
@@ -171,11 +177,30 @@ func _run() -> void:
     if attack.visible:
         _fail("Desktop attack button should be hidden in favor of left-click combat")
         return
-    if not hint.text.contains("WASD") or not hint.text.contains("1/2/3") or not hint.text.contains("全螢幕"):
+    if not hint.text.contains("WASD") or not hint.text.contains("1/2/3") or not hint.text.contains("M 全地圖"):
         _fail("Desktop landscape controls are not documented")
         return
     if ui_root.theme == null or ui_root.theme.default_font != imported_font:
         _fail("Shared imported Traditional Chinese theme is not active")
+        return
+
+    _stage("full_map")
+    var map_key := InputEventKey.new()
+    map_key.keycode = KEY_M
+    map_key.pressed = true
+    scene.call("_unhandled_input", map_key)
+    await process_frame
+    var map_state: Dictionary = scene.call("debug_map_state")
+    if not bool(map_state.get("open", false)) or not bool(map_state.get("launcher", false)) or not bool(map_state.get("screen", false)):
+        _fail("M did not open the full-region map")
+        return
+    if not bool(map_state.get("player_marker", false)) or (map_state.get("map_size", Vector2.ZERO) as Vector2).y < 300.0:
+        _fail("Full-region map did not render its player marker or usable map area")
+        return
+    scene.call("_unhandled_input", map_key)
+    await process_frame
+    if bool((scene.call("debug_map_state") as Dictionary).get("open", true)):
+        _fail("M did not close the full-region map")
         return
 
     var weapon: Dictionary = scene.call("debug_weapon_state")
@@ -313,5 +338,5 @@ func _run() -> void:
         return
 
     _finished = true
-    print("RIFTFORGED_V2_SMOKE_OK desktop-1280x720/fullscreen/weapon-skills/pools/loot/large-region-runtime ready")
+    print("RIFTFORGED_V2_SMOKE_OK desktop/full-map/weapon-skills/pools/loot/large-region-quality ready")
     quit(0)

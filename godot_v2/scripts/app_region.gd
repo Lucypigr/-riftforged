@@ -1,7 +1,20 @@
 extends "res://scripts/app_arpg_hud.gd"
 
 const RegionMapScript = preload("res://scripts/region_map.gd")
+const RegionMapOverlayScript = preload("res://scripts/region_map_overlay.gd")
+
 var region_map: RiftRegionMap
+var region_map_overlay: RiftRegionMapOverlay
+
+func _ready() -> void:
+    super._ready()
+    if region_map != null and player != null and ui_font != null:
+        region_map_overlay = RegionMapOverlayScript.new() as RiftRegionMapOverlay
+        region_map_overlay.name = "RegionMapOverlay"
+        add_child(region_map_overlay)
+        region_map_overlay.setup(ui_font, region_map, player)
+        region_map_overlay.toggle_requested.connect(_toggle_region_map)
+        region_map_overlay.close_requested.connect(_close_region_map)
 
 func _build_world() -> void:
     var environment_node := WorldEnvironment.new()
@@ -25,6 +38,7 @@ func _build_world() -> void:
     region_map = RegionMapScript.new()
     add_child(region_map)
     region_map.build()
+    region_map.exit_reached.connect(_on_region_exit_reached)
 
 func _build_player() -> void:
     super._build_player()
@@ -38,7 +52,23 @@ func _spawn_enemy(force_elite: bool = false, slot: int = -1) -> void:
     var entry: Dictionary = enemies[enemies.size() - 1]
     var enemy := entry["node"] as CharacterBody3D
     if is_instance_valid(enemy):
-        enemy.position = region_map.enemy_spawn_position(maxi(slot, 0), enemy_serial)
+        enemy.position = region_map.enemy_spawn_position(maxi(slot, 0), enemy_serial, force_elite)
+
+func _unhandled_input(event: InputEvent) -> void:
+    if event is InputEventKey:
+        var key := event as InputEventKey
+        if key.pressed and not key.echo and key.keycode == KEY_M:
+            _toggle_region_map()
+            get_viewport().set_input_as_handled()
+            return
+        if _is_region_map_open() and key.pressed and not key.echo and key.keycode == KEY_ESCAPE:
+            _close_region_map()
+            get_viewport().set_input_as_handled()
+            return
+    if _is_region_map_open():
+        get_viewport().set_input_as_handled()
+        return
+    super._unhandled_input(event)
 
 # The inherited runtime eventually reaches app_grim.gd, where the legacy arena
 # clamps the player to +/-18. The region therefore owns the movement step until
@@ -47,6 +77,9 @@ func _spawn_enemy(force_elite: bool = false, slot: int = -1) -> void:
 # and HUD refresh must continue while exploring the large map.
 func _physics_process(delta: float) -> void:
     if player == null:
+        return
+    if _is_region_map_open():
+        player.velocity = Vector3.ZERO
         return
 
     player_mana = minf(player_max_mana, player_mana + MANA_REGEN_PER_SECOND * delta)
@@ -88,6 +121,22 @@ func _physics_process(delta: float) -> void:
         _resource_ui_accumulator = 0.0
         _refresh_resource_hud()
 
+func _toggle_region_map() -> void:
+    if region_map_overlay == null:
+        return
+    region_map_overlay.set_open(not region_map_overlay.is_open())
+
+func _close_region_map() -> void:
+    if region_map_overlay != null:
+        region_map_overlay.set_open(false)
+
+func _is_region_map_open() -> bool:
+    return region_map_overlay != null and region_map_overlay.is_open()
+
+func _on_region_exit_reached() -> void:
+    if ui != null:
+        ui.set_hint("北方裂隙出口：Region 02 將從這裡接續")
+
 func _use_dash_skill() -> void:
     skill_cooldowns[2] = 5.0
     var direction := _movement_direction()
@@ -122,4 +171,12 @@ func debug_region_state() -> Dictionary:
         "south_edge": RiftRegionMap.SOUTH_EDGE,
         "half_width": RiftRegionMap.HALF_WIDTH,
         "player_spawn": region_map.spawn_position() if region_map != null else Vector3.ZERO,
+        "zones": region_map.map_zones().size() if region_map != null else 0,
+        "landmarks": region_map.map_landmarks().size() if region_map != null else 0,
+        "region02_exit": region_map.get_node_or_null("Region02Exit") != null if region_map != null else false,
     }
+
+func debug_map_state() -> Dictionary:
+    if region_map_overlay == null:
+        return {"open": false, "launcher": false, "screen": false, "player_marker": false, "map_size": Vector2.ZERO}
+    return region_map_overlay.debug_state()
