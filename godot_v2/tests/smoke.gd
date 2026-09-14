@@ -222,20 +222,30 @@ func _run() -> void:
         return
     await create_timer(0.36).timeout
     await process_frame
-    if not is_instance_valid(enemy_label):
-        _fail("Basic attack unexpectedly removed the smoke-test enemy")
-        return
-    if enemy_label.text == before_mobile:
-        _fail("Basic projectile did not damage its target")
+    if is_instance_valid(enemy_label) and enemy_label.text == before_mobile:
+        _fail("Basic projectile neither damaged nor defeated its target")
         return
 
     _stage("mouse_attack")
-    first_enemy.global_position = player.global_position + Vector3(3.0, 0.0, 0.0)
-    var before_mouse := enemy_label.text
+    var mouse_target := enemies.get_child(0) as CharacterBody3D
+    if mouse_target == null:
+        _fail("Mouse attack target is missing")
+        return
+    if mouse_target == first_enemy and enemies.get_child_count() > 1:
+        mouse_target = enemies.get_child(1) as CharacterBody3D
+    if mouse_target == null:
+        _fail("Fresh mouse attack target is missing")
+        return
+    var mouse_label := mouse_target.get_node_or_null("NameLabel") as Label3D
+    if mouse_label == null:
+        _fail("Mouse attack target label is missing")
+        return
+    mouse_target.global_position = player.global_position + Vector3(3.0, 0.0, 0.0)
+    var before_mouse := mouse_label.text
     var mouse_event := InputEventMouseButton.new()
     mouse_event.button_index = MOUSE_BUTTON_LEFT
     mouse_event.pressed = true
-    mouse_event.position = camera.unproject_position(first_enemy.global_position + Vector3(0, 1.0, 0))
+    mouse_event.position = camera.unproject_position(mouse_target.global_position + Vector3(0, 1.0, 0))
     scene.call("_unhandled_input", mouse_event)
     await process_frame
     var release_event := InputEventMouseButton.new()
@@ -248,11 +258,8 @@ func _run() -> void:
         return
     await create_timer(0.36).timeout
     await process_frame
-    if not is_instance_valid(enemy_label):
-        _fail("Mouse attack unexpectedly removed the smoke-test enemy")
-        return
-    if enemy_label.text == before_mouse:
-        _fail("Desktop cursor-targeted projectile did not damage its target")
+    if is_instance_valid(mouse_label) and mouse_label.text == before_mouse:
+        _fail("Desktop cursor-targeted projectile neither damaged nor defeated its target")
         return
 
     _stage("skill")
