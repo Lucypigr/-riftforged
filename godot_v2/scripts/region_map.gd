@@ -117,6 +117,15 @@ func streaming_state() -> Dictionary:
         "center": _stream_center,
     }
 
+func terrain_visual_state() -> Dictionary:
+    var spawn_color := _terrain_color(0.0, 128.0)
+    var forest_color := _terrain_color(12.0, 76.0)
+    return {
+        "spawn_color": spawn_color,
+        "forest_color": forest_color,
+        "spawn_luminance": spawn_color.r * 0.2126 + spawn_color.g * 0.7152 + spawn_color.b * 0.0722,
+    }
+
 func map_bounds() -> Dictionary:
     return {
         "half_width": HALF_WIDTH,
@@ -145,18 +154,19 @@ func map_landmarks() -> Array[Dictionary]:
 func _make_materials() -> void:
     var terrain := StandardMaterial3D.new()
     terrain.albedo_color = Color.WHITE
-    terrain.roughness = 1.0
+    terrain.roughness = 0.94
+    terrain.metallic = 0.0
     terrain.vertex_color_use_as_albedo = true
     _materials["terrain"] = terrain
-    _materials["earth"] = _material(Color(0.055, 0.075, 0.060), 1.0)
-    _materials["road"] = _material(Color(0.19, 0.155, 0.105), 1.0)
-    _materials["grass"] = _material(Color(0.075, 0.13, 0.075), 1.0)
-    _materials["marsh"] = _material(Color(0.045, 0.095, 0.09), 0.92)
-    _materials["rock"] = _material(Color(0.12, 0.115, 0.105), 0.96)
-    _materials["ruin"] = _material(Color(0.21, 0.19, 0.16), 0.94)
-    _materials["rift"] = _material(Color(0.16, 0.045, 0.075), 0.9, Color(0.34, 0.02, 0.08))
-    _materials["water"] = _material(Color(0.025, 0.13, 0.17, 0.72), 0.32)
-    _materials["fire"] = _material(Color(0.34, 0.11, 0.025), 0.7, Color(1.0, 0.26, 0.03))
+    _materials["earth"] = _material(Color(0.24, 0.28, 0.17), 1.0)
+    _materials["road"] = _material(Color(0.36, 0.27, 0.15), 0.98)
+    _materials["grass"] = _material(Color(0.18, 0.32, 0.13), 1.0)
+    _materials["marsh"] = _material(Color(0.11, 0.22, 0.19), 0.92)
+    _materials["rock"] = _material(Color(0.27, 0.25, 0.22), 0.96)
+    _materials["ruin"] = _material(Color(0.36, 0.33, 0.28), 0.94)
+    _materials["rift"] = _material(Color(0.27, 0.09, 0.14), 0.9, Color(0.22, 0.025, 0.06))
+    _materials["water"] = _material(Color(0.055, 0.24, 0.30, 0.78), 0.30)
+    _materials["fire"] = _material(Color(0.58, 0.20, 0.035), 0.65, Color(1.0, 0.30, 0.035))
 
 func _material(color: Color, roughness: float, emission: Color = Color.BLACK) -> StandardMaterial3D:
     var mat := StandardMaterial3D.new()
@@ -220,7 +230,7 @@ func _build_terrain_mesh(chunk: Node3D, index: int, north: float, south: float) 
             var y := surface_height(x, z)
             vertices.append(Vector3(x, y, z))
             normals.append(_terrain_normal(x, z))
-            colors.append(_terrain_color(z))
+            colors.append(_terrain_color(x, z))
 
     var stride := TERRAIN_X_SEGMENTS + 1
     for row in range(TERRAIN_Z_SEGMENTS):
@@ -255,26 +265,41 @@ func _terrain_normal(x: float, z: float) -> Vector3:
     var south := surface_height(x, z + step)
     return Vector3(left - right, step * 2.0, north - south).normalized()
 
-func _terrain_color(z: float) -> Color:
-    var camp := Color(0.095, 0.125, 0.075)
-    var forest := Color(0.055, 0.115, 0.060)
-    var ruins := Color(0.115, 0.105, 0.078)
-    var marsh := Color(0.040, 0.090, 0.082)
-    var canyon := Color(0.120, 0.090, 0.064)
-    var rift := Color(0.100, 0.050, 0.070)
+func _terrain_color(x: float, z: float) -> Color:
+    var camp := Color(0.30, 0.37, 0.20)
+    var forest := Color(0.16, 0.30, 0.14)
+    var ruins := Color(0.31, 0.28, 0.20)
+    var marsh := Color(0.12, 0.24, 0.21)
+    var canyon := Color(0.32, 0.23, 0.15)
+    var rift := Color(0.24, 0.11, 0.17)
+    var base := camp
     if z >= 125.0:
-        return camp
-    if z >= 75.0:
-        return camp.lerp(forest, _smooth01((125.0 - z) / 50.0))
-    if z >= 27.5:
-        return forest.lerp(ruins, _smooth01((75.0 - z) / 47.5))
-    if z >= -20.0:
-        return ruins.lerp(marsh, _smooth01((27.5 - z) / 47.5))
-    if z >= -72.5:
-        return marsh.lerp(canyon, _smooth01((-20.0 - z) / 52.5))
-    if z >= -125.0:
-        return canyon.lerp(rift, _smooth01((-72.5 - z) / 52.5))
-    return rift
+        base = camp
+    elif z >= 75.0:
+        base = camp.lerp(forest, _smooth01((125.0 - z) / 50.0))
+    elif z >= 27.5:
+        base = forest.lerp(ruins, _smooth01((75.0 - z) / 47.5))
+    elif z >= -20.0:
+        base = ruins.lerp(marsh, _smooth01((27.5 - z) / 47.5))
+    elif z >= -72.5:
+        base = marsh.lerp(canyon, _smooth01((-20.0 - z) / 52.5))
+    elif z >= -125.0:
+        base = canyon.lerp(rift, _smooth01((-72.5 - z) / 52.5))
+    else:
+        base = rift
+
+    var variation := sin(x * 0.31 + z * 0.073) * 0.055 + cos(x * 0.17 - z * 0.113) * 0.035
+    var road_distance := absf(x - _road_x(z))
+    var shoulder := 1.0 - _smooth01(clampf((road_distance - 4.0) / 8.0, 0.0, 1.0))
+    var dirt := Color(0.34, 0.27, 0.16)
+    base = base.lerp(dirt, shoulder * 0.18)
+    var brightness := 1.0 + variation
+    return Color(
+        clampf(base.r * brightness, 0.0, 1.0),
+        clampf(base.g * brightness, 0.0, 1.0),
+        clampf(base.b * brightness, 0.0, 1.0),
+        1.0
+    )
 
 func _build_road_mesh(chunk: Node3D, index: int, north: float, south: float) -> void:
     var vertices := PackedVector3Array()
