@@ -70,11 +70,8 @@ func _unhandled_input(event: InputEvent) -> void:
         return
     super._unhandled_input(event)
 
-# The inherited runtime eventually reaches app_grim.gd, where the legacy arena
-# clamps the player to +/-18. The region therefore owns the movement step until
-# the common runtime has a world-bounds strategy. Keep every higher-level tick
-# here as well: mana regen, skill cooldowns, pooled-AI/label maintenance, loot,
-# and HUD refresh must continue while exploring the large map.
+# Region 01 owns its world bounds and terrain stream while preserving all higher
+# level ARPG ticks inherited from the older arena runtime.
 func _physics_process(delta: float) -> void:
     if player == null:
         return
@@ -102,10 +99,12 @@ func _physics_process(delta: float) -> void:
     player.move_and_slide()
     if region_map != null:
         player.position = region_map.clamp_player(player.position)
+        region_map.update_streaming(player.position)
     if player_visual != null and absf(input_vector.x) > 0.05:
         player_visual.flip_h = input_vector.x < 0.0
 
     _update_enemies(delta)
+    _snap_region_enemies_to_surface()
     _update_loot()
     _update_label_visibility()
     if mouse_fire_held and attack_cooldown <= 0.0:
@@ -120,6 +119,18 @@ func _physics_process(delta: float) -> void:
     if _resource_ui_accumulator >= 0.10:
         _resource_ui_accumulator = 0.0
         _refresh_resource_hud()
+
+func _snap_region_enemies_to_surface() -> void:
+    if region_map == null:
+        return
+    for entry_value in enemies:
+        var entry := entry_value as Dictionary
+        var enemy := entry.get("node") as CharacterBody3D
+        if not is_instance_valid(enemy):
+            continue
+        var pos := enemy.position
+        pos.y = region_map.surface_height(pos.x, pos.z)
+        enemy.position = pos
 
 func _toggle_region_map() -> void:
     if region_map_overlay == null:
@@ -151,6 +162,8 @@ func _use_dash_skill() -> void:
         destination = region_map.clamp_player(destination)
     _spawn_hit_flash(start + Vector3(0, 0.65, 0), Color(0.30, 0.62, 1.0), 3.2)
     player.global_position = destination
+    if region_map != null:
+        region_map.update_streaming(player.position)
     _spawn_hit_flash(destination + Vector3(0, 0.65, 0), Color(0.30, 0.62, 1.0), 3.2)
     ui.set_hint("裂隙衝刺：快速位移")
 
@@ -161,10 +174,13 @@ func _damage_player(amount: float) -> void:
         player_hp = player_max_hp
         player.velocity = Vector3.ZERO
         player.position = region_map.spawn_position() if region_map != null else Vector3.ZERO
+        if region_map != null:
+            region_map.update_streaming(player.position)
         ui.set_hp(player_hp, player_max_hp)
         ui.set_hint("你被裂隙吞沒，已在南方營地重生")
 
 func debug_region_state() -> Dictionary:
+    var streaming := region_map.streaming_state() if region_map != null else {}
     return {
         "region": region_map.name if region_map != null else "",
         "north_edge": RiftRegionMap.NORTH_EDGE,
@@ -174,7 +190,14 @@ func debug_region_state() -> Dictionary:
         "zones": region_map.map_zones().size() if region_map != null else 0,
         "landmarks": region_map.map_landmarks().size() if region_map != null else 0,
         "region02_exit": region_map.get_node_or_null("Region02Exit") != null if region_map != null else false,
+        "terrain_root": region_map.get_node_or_null("TerrainChunks") != null if region_map != null else false,
+        "chunk_total": int(streaming.get("chunk_total", 0)),
+        "chunk_loaded": int(streaming.get("loaded", 0)),
+        "chunk_length": float(streaming.get("chunk_length", 0.0)),
     }
+
+func debug_streaming_state() -> Dictionary:
+    return region_map.streaming_state() if region_map != null else {}
 
 func debug_map_state() -> Dictionary:
     if region_map_overlay == null:

@@ -90,6 +90,29 @@ func _run() -> void:
         _fail("North Region 02 exit trigger is missing")
         return
 
+    _stage("terrain_stream")
+    if not bool(region_state.get("terrain_root", false)):
+        _fail("Seamless terrain chunk root is missing")
+        return
+    if int(region_state.get("chunk_total", 0)) != 15 or absf(float(region_state.get("chunk_length", 0.0)) - 20.0) > 0.01:
+        _fail("Terrain chunk dimensions changed unexpectedly")
+        return
+    var initial_stream: Dictionary = scene.call("debug_streaming_state")
+    var initial_loaded := int(initial_stream.get("loaded", 0))
+    if initial_loaded < 2 or initial_loaded > 5:
+        _fail("Initial terrain stream loaded the wrong number of chunks")
+        return
+    var initial_active: Array = initial_stream.get("active", [])
+    region_root.call("update_streaming", Vector3(0, 0, -122))
+    var north_stream: Dictionary = scene.call("debug_streaming_state")
+    if int(north_stream.get("loaded", 0)) > 5 or int(north_stream.get("center", -1)) < 10:
+        _fail("Terrain stream did not move its active window north")
+        return
+    if (north_stream.get("active", []) as Array) == initial_active:
+        _fail("Terrain stream kept the same chunks after a long-distance move")
+        return
+    region_root.call("update_streaming", Vector3(0, 0, 128))
+
     _stage("perf")
     var perf: Dictionary = scene.call("debug_perf_pass2")
     if int(perf.get("ai_phases", 0)) != 2 or int(perf.get("loot_cap", 0)) != 24:
@@ -345,5 +368,5 @@ func _run() -> void:
         return
 
     _finished = true
-    print("RIFTFORGED_V2_SMOKE_OK desktop/full-map/weapon-skills/pools/loot/large-region-quality ready")
+    print("RIFTFORGED_V2_SMOKE_OK desktop/full-map/terrain-stream/weapon-skills/pools/loot ready")
     quit(0)
