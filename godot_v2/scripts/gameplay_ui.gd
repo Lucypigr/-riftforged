@@ -14,7 +14,10 @@ var _skill_names := ["武器技", "爆裂", "衝刺"]
 func setup(font: FontFile) -> void:
     super.setup(font)
     _build_gameplay_controls()
-    _layout()
+    # setup() is also used by RiftDesktopGameplayUI. Do not dispatch the
+    # overridable _layout() until the desktop subclass has finished building
+    # its own HUD nodes; lay out only the controls owned by this layer here.
+    _layout_gameplay_controls()
 
 func _build_gameplay_controls() -> void:
     weapon_status = Label.new()
@@ -84,6 +87,9 @@ func _build_gameplay_controls() -> void:
 
 func _layout() -> void:
     super._layout()
+    _layout_gameplay_controls()
+
+func _layout_gameplay_controls() -> void:
     if root_control == null or equipment_button == null:
         return
     var size := get_viewport().get_visible_rect().size
