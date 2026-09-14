@@ -246,6 +246,45 @@ func _run() -> void:
         _fail("Ranged weapon skill did not spawn pooled projectiles")
         return
 
+    _stage("region_runtime")
+    var cooldown_before_tick := float(cds[0])
+    skill_enemy.global_position = expected_spawn + Vector3(20.0, 0.0, 0.0)
+    await create_timer(0.16).timeout
+    await process_frame
+    var cooldown_after_tick := float((scene.call("debug_skill_cooldowns") as Array)[0])
+    if cooldown_after_tick >= cooldown_before_tick - 0.05:
+        _fail("Large-region runtime stopped ticking skill cooldowns")
+        return
+
+    scene.call("debug_set_mana", 20.0)
+    var mana_before := float((scene.call("debug_resource_state") as Dictionary).get("mana", 0.0))
+    await create_timer(0.16).timeout
+    await process_frame
+    var mana_after := float((scene.call("debug_resource_state") as Dictionary).get("mana", 0.0))
+    if mana_after <= mana_before + 0.5:
+        _fail("Large-region runtime stopped regenerating mana")
+        return
+
+    player.global_position = expected_spawn
+    player.velocity = Vector3.ZERO
+    scene.set("last_aim_direction", Vector3(0.0, 0.0, -1.0))
+    var dash_start := player.global_position
+    scene.call("_use_skill", 2)
+    await process_frame
+    var dash_end := player.global_position
+    if dash_start.distance_to(dash_end) < 4.0:
+        _fail("Region dash did not move the player")
+        return
+    if absf(dash_start.z) > 18.5 and absf(dash_end.z) <= 18.5:
+        _fail("Region dash snapped player back to the legacy arena bounds")
+        return
+
+    scene.call("_damage_player", 10000.0)
+    await process_frame
+    if player.global_position.distance_to(expected_spawn) > 0.25:
+        _fail("Region death did not respawn the player at the south camp")
+        return
+
     _stage("equipment")
     scene.call("debug_add_test_weapon", "blade")
     if int(scene.call("debug_weapon_inventory_count")) < 2:
@@ -274,5 +313,5 @@ func _run() -> void:
         return
 
     _finished = true
-    print("RIFTFORGED_V2_SMOKE_OK desktop-1280x720/fullscreen/weapon-skills/pools/loot/large-region ready")
+    print("RIFTFORGED_V2_SMOKE_OK desktop-1280x720/fullscreen/weapon-skills/pools/loot/large-region-runtime ready")
     quit(0)
