@@ -22,12 +22,6 @@ func _build_world() -> void:
     light.shadow_enabled = false
     add_child(light)
 
-    # Keep the root-level Ground runtime contract used by smoke tests and future systems.
-    # The actual terrain meshes/colliders live inside the region builder below.
-    var ground_anchor := Node3D.new()
-    ground_anchor.name = "Ground"
-    add_child(ground_anchor)
-
     region_map = RegionMapScript.new()
     add_child(region_map)
     region_map.build()
