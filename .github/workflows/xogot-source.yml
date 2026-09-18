@@ -1,0 +1,52 @@
+name: Package editable Xogot project
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'godot_v2/**'
+      - '.github/workflows/xogot-source.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Prepare Traditional Chinese font
+        run: python3 godot_v2/tools/prepare_font.py --project godot_v2
+      - name: Create editable Godot project ZIP
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          import hashlib
+          root=Path('godot_v2')
+          target=Path('Riftforged-Godot-V2-Xogot.zip')
+          ignore={'.godot','.git','__pycache__'}
+          files=[p for p in root.rglob('*') if p.is_file() and not any(part in ignore for part in p.relative_to(root).parts)]
+          assert (root/'project.godot') in files
+          assert (root/'main.tscn') in files
+          font=root/'fonts/NotoSansTC-Riftforged.ttf'
+          assert font in files and font.stat().st_size > 5_000_000
+          with ZipFile(target,'w',compression=ZIP_DEFLATED,compresslevel=6) as archive:
+              for path in sorted(files):
+                  archive.write(path, 'Riftforged-Godot-V2/'+str(path.relative_to(root)))
+              archive.writestr('Riftforged-Godot-V2/開啟方式.txt', 'Xogot / Godot 原始專案；包含繁中字型。\n1. 在「檔案」App 點 ZIP 解壓縮。\n2. 將 Riftforged-Godot-V2 資料夾複製至「我的 iPhone／iPad」> Xogot 資料夾。\n3. 從 Xogot 專案管理員開啟 Riftforged-Godot-V2/project.godot。\n這是可編輯原始專案，不是安裝用 IPA 或網頁匯出檔。\n')
+          with ZipFile(target) as archive:
+              assert archive.testzip() is None
+              assert 'Riftforged-Godot-V2/project.godot' in archive.namelist()
+          print('XOGOT_SOURCE_PACKAGE_OK',target,target.stat().st_size,'bytes',len(files),'source files')
+          print('SHA256',hashlib.sha256(target.read_bytes()).hexdigest())
+          PY
+      - name: Upload Xogot editable ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: Riftforged-Godot-V2-Xogot
+          path: Riftforged-Godot-V2-Xogot.zip
+          if-no-files-found: error
+          retention-days: 30
