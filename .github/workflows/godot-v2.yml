@@ -60,6 +60,9 @@ jobs:
       - name: Headless ARPG HUD smoke test
         run: godot --headless --path godot_v2 --script res://tests/hud_smoke.gd
 
+      - name: Headless shared equipment inventory regression
+        run: godot --headless --path godot_v2 --script res://tests/unified_inventory_smoke.gd
+
       - name: Export Web build
         run: |
           rm -rf "$GITHUB_WORKSPACE/godot-v2-web"
