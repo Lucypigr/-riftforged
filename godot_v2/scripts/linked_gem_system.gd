@@ -1,8 +1,7 @@
 extends RefCounted
 class_name RiftLinkedGemSystem
 
-# Original Riftforged names and effects; socket colours and linked support rules
-# are inspired by the equipment puzzle specified for this project.
+# Original Riftforged names and effects; colour, socket and linked support rules.
 const MAX_SOCKETS := 6
 const COLORS := ["red", "green", "blue"]
 const GEMS := {
@@ -15,10 +14,10 @@ const GEMS := {
 }
 
 static func make_gem(id: String, uid: int) -> Dictionary:
-    var data: Dictionary = GEMS.get(id, {})
-    if data.is_empty():
+    var gem_data: Dictionary = GEMS.get(id, {})
+    if gem_data.is_empty():
         return {}
-    return {"id":id, "uid":uid, "name":String(data["name"]), "color":String(data["color"]), "level":1, "refine":0}
+    return {"id":id, "uid":uid, "name":String(gem_data["name"]), "color":String(gem_data["color"]), "level":1, "refine":0}
 
 static func data(gem: Dictionary) -> Dictionary:
     return GEMS.get(String(gem.get("id", "")), {})
@@ -134,9 +133,9 @@ static func recolor(weapon: Dictionary) -> Array[Dictionary]:
     for i in range(sockets.size()):
         var socket: Dictionary = sockets[i]
         var old_color := String(socket.get("color", "red"))
-        var new_color := COLORS[randi_range(0, COLORS.size() - 1)]
+        var new_color: String = String(COLORS[randi_range(0, COLORS.size() - 1)])
         if new_color == old_color:
-            new_color = COLORS[(COLORS.find(old_color) + 1) % COLORS.size()]
+            new_color = String(COLORS[(COLORS.find(old_color) + 1) % COLORS.size()])
         socket["color"] = new_color
         var gem: Dictionary = socket.get("gem", {})
         if not gem.is_empty() and String(gem.get("color", "")) != new_color:
