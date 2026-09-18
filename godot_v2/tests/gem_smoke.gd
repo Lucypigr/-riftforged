@@ -40,7 +40,6 @@ func _run() -> void:
     if int(initial.get("active_index", -1)) != 0 or not (initial.get("supports", []) as Array).has("multishot") or float(initial.get("damage", 0.0)) <= 0.0 or not bool(initial.get("ui_ready", false)):
         _fail("Linked starter fireball, compatible support or real UI not ready")
         return
-    var expected_total := 2 + (initial.get("stash", []) as Array).size()
 
     _stage = "touch_panel"
     game.call("_open_gem_ui")
@@ -166,6 +165,9 @@ func _run() -> void:
     if not bool(aura_state.get("aura_on", false)):
         _fail("Installed blue aura cannot toggle on")
         return
+    # Refine left a stash selection active: tapping an occupied socket with a
+    # selection means replace, not extract. Clear selection before extracting.
+    game.call("_select_gem", 0)
     game.call("_use_socket", 2)
     if bool((game.call("debug_gem_state") as Dictionary).get("aura_on", true)):
         _fail("Removing equipped aura did not disable its effect")
