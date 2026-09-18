@@ -71,7 +71,6 @@ func _run() -> void:
     if not _check(absf(float((game.call("debug_weapon_state") as Dictionary).get("damage", 0)) - 42.0) < 0.01 and (game.call("debug_hotbar_state") as Dictionary).get("ids", [])[0] == "", "Weapon stats or hotbar not recomputed"):
         return
     for repeat in range(2):
-        # Touch-style: select in bag, then tap the target gear slot.
         view.call("_select_item", "weapon", 0)
         var board := view.gear_list.get_node("EquipmentBoard") as GridContainer
         (board.get_node("Equipped_weapon") as Button).pressed.emit()
@@ -117,10 +116,9 @@ func _run() -> void:
     var many_card := grid.get_node_or_null("ArmorItem_3") as Button
     if not _check(zero_card != null and one_card != null and many_card != null and zero_card.text.is_empty() and zero_card.get_node_or_null("Socket_0") == null and one_card.get_node_or_null("Socket_0") != null and one_card.get_node_or_null("Socket_1") == null and many_card.get_node_or_null("Socket_2") != null and many_card.get_node_or_null("Link_0") != null and many_card.get_node_or_null("Link_1") == null, "0/1/3 sockets, actual links or socket-first cards incorrect"):
         return
-    var zero_uid := int((bag[1] as Dictionary).get("instance_uid", 0))
+    var zero_uid := int(((game.get("armor_inventory") as Array)[1] as Dictionary).get("instance_uid", 0))
     var initial_armor_count := (game.get("armor_inventory") as Array).size()
     view.call("_select_item", "armor", 1)
-    # Wrong equipment slot cannot silently equip or launch gem editor.
     (view.gear_list.get_node("EquipmentBoard/Equipped_頭部") as Button).pressed.emit()
     if not _check(int((game.get("equipped_armor") as Dictionary)["鞋子"].get("instance_uid", 0)) != zero_uid, "Wrong slot accepted boots"):
         return
@@ -150,7 +148,7 @@ func _run() -> void:
         view.call("_select_item", "armor", 3)
         tooltip = view.root.get_node("ItemInspection") as Panel
         var bounds := tooltip.get_global_rect()
-        var screen := get_viewport().get_visible_rect().size
+        var screen := view.get_viewport().get_visible_rect().size
         if not _check(tooltip.visible and bounds.position.x >= -0.01 and bounds.position.y >= -0.01 and bounds.end.x <= screen.x + 0.01 and bounds.end.y <= screen.y + 0.01, "Tooltip overflow at %s" % str(size)):
             return
         if not _check(tooltip.mouse_filter == Control.MOUSE_FILTER_IGNORE and (view.gear_list.get_node("EquipmentBoard/Equipped_身體") as Button).mouse_filter != Control.MOUSE_FILTER_IGNORE, "Mobile tooltip blocked equipment target"):
