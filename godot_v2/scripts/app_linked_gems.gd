@@ -28,7 +28,6 @@ func _ready() -> void:
     equipped_weapon = starter.duplicate(true)
     for id in ["chain", "crimson_burst", "swift_aura", "rift_trail"]:
         gem_inventory.append(_make_gem(id))
-
     gem_ui = GemUIScript.new() as RiftLinkedGemUI
     gem_ui.name = "LinkedGemInventory"
     add_child(gem_ui)
@@ -38,7 +37,6 @@ func _ready() -> void:
     gem_ui.currency_requested.connect(_use_currency)
     gem_ui.aura_requested.connect(_toggle_aura)
     ui.gem_button.pressed.connect(_open_gem_ui)
-
     var gameplay_ui := ui as RiftGameplayUI
     if gameplay_ui != null and gameplay_ui.equipment_panel != null:
         var content := gameplay_ui.equipment_panel.get_node_or_null("Content") as VBoxContainer
@@ -59,8 +57,6 @@ func _make_gem(id: String) -> Dictionary:
 func _open_gem_ui() -> void:
     if gem_ui == null:
         return
-    # The old four-slot panel may still have its existing button signal;
-    # explicitly suppress it rather than showing two conflicting systems.
     if ui.gem_panel != null:
         ui.gem_panel.visible = false
     var gameplay_ui := ui as RiftGameplayUI
@@ -242,18 +238,16 @@ func _pickup_item(item: Dictionary) -> void:
 func _drop_loot(position: Vector3, entry: Dictionary, guaranteed: bool) -> void:
     var elite := bool(entry.get("elite", false))
     var boss := bool(entry.get("boss", false))
-    # Weapon rate: 3% ordinary monsters, 80% elites/bosses.
     if guaranteed or randf() < (0.80 if elite or boss else 0.03):
         super._drop_loot(position, entry, true)
-    # Each gem is an actual ground item, picked up by the player like equipment.
     if randf() < (0.78 if boss else (0.38 if elite else 0.05)):
-        var id := GEM_IDS[randi_range(0, GEM_IDS.size() - 1)]
+        var id: String = String(GEM_IDS[randi_range(0, GEM_IDS.size() - 1)])
         var gem := _make_gem(id)
         var drop := {"id":"gem_" + id, "slot":"寶石", "name":String(gem["name"]), "rarity":"寶石", "color":_gem_color(String(gem["color"])), "gem":gem}
         _spawn_loot_visual(position + Vector3(randf_range(-0.8, 0.8), 0.0, randf_range(-0.8, 0.8)), drop)
     if randf() < (0.75 if boss else (0.30 if elite else 0.07)):
         var kinds := ["jeweller", "fusing", "chromatic", "refine"]
-        var kind := kinds[randi_range(0, kinds.size() - 1)]
+        var kind: String = String(kinds[randi_range(0, kinds.size() - 1)])
         var names := {"jeweller":"開孔石", "fusing":"連結石", "chromatic":"幻色石", "refine":"精煉石"}
         var currency_drop := {"id":"currency_" + kind, "slot":"通貨", "name":String(names[kind]), "rarity":"通貨", "color":Color(0.92, 0.75, 0.37), "currency":kind}
         _spawn_loot_visual(position + Vector3(randf_range(-0.8, 0.8), 0.0, randf_range(-0.8, 0.8)), currency_drop)
