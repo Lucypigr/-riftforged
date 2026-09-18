@@ -54,6 +54,9 @@ jobs:
       - name: Headless clean-rebuild smoke test
         run: godot --headless --path godot_v2 --script res://tests/smoke.gd
 
+      - name: Headless linked-gem interaction smoke test
+        run: godot --headless --path godot_v2 --script res://tests/gem_smoke.gd
+
       - name: Headless ARPG HUD smoke test
         run: godot --headless --path godot_v2 --script res://tests/hud_smoke.gd
 
