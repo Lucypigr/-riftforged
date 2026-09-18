@@ -6,6 +6,7 @@ const SLOTS := ["頭部", "身體", "腿部", "鞋子"]
 const LIMITS := {"頭部":4, "身體":6, "腿部":4, "鞋子":4}
 const BASE_ARMOR := {"頭部":7.0, "身體":14.0, "腿部":9.0, "鞋子":5.0}
 const STARTERS := {"頭部":"旅者兜帽", "身體":"旅者皮甲", "腿部":"旅者護腿", "鞋子":"荒徑長靴"}
+const FOOTPRINTS := {"頭部":Vector2i(2, 2), "身體":Vector2i(2, 3), "腿部":Vector2i(2, 3), "鞋子":Vector2i(2, 2)}
 
 static func canonical_slot(value: String) -> String:
     match value:
@@ -26,6 +27,9 @@ static func normalize(source: Dictionary, is_starter: bool = false) -> Dictionar
         return {}
     item["slot"] = slot
     item["max_sockets"] = int(LIMITS[slot])
+    item["inventory_w"] = int((FOOTPRINTS[slot] as Vector2i).x)
+    item["inventory_h"] = int((FOOTPRINTS[slot] as Vector2i).y)
+    item["socket_layout_id"] = slot
     if not item.has("armor"):
         item["armor"] = float(BASE_ARMOR[slot]) + float(maxi(0, int(item.get("level", 1)) - 1)) * 0.8
     if not item.has("sockets"):
