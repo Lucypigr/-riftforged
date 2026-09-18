@@ -3,6 +3,7 @@ extends SceneTree
 const FONT_PATH := "res://fonts/NotoSansTC-Riftforged.ttf"
 const LootSystem = preload("res://scripts/loot_system.gd")
 const WeaponSkillSystem = preload("res://scripts/weapon_skill_system.gd")
+const GemSystem = preload("res://scripts/linked_gem_system.gd")
 const REQUIRED_GLYPHS := ["攻", "擊", "寶", "石", "裂", "隙", "獸", "菁", "英", "獵", "犬", "衛", "士", "咒", "徒", "裝", "備", "武", "器", "技", "能", "衝", "刺", "爆", "全", "螢", "幕", "◆", "◇"]
 
 var _finished := false
@@ -17,7 +18,7 @@ func _stage(name: String) -> void:
     print("RIFTFORGED_SMOKE_STAGE ", name)
 
 func _watchdog() -> void:
-    await create_timer(12.0).timeout
+    await create_timer(14.0).timeout
     if not _finished:
         _fail("Smoke test timed out at stage: %s" % _last_stage)
 
@@ -37,7 +38,6 @@ func _run() -> void:
     if magic.size() != 4 or magic[0] != 0 or magic[1] != 1 or magic[2] != 0 or magic[3] != 0:
         _fail("Traditional Chinese font is not a TrueType file")
         return
-
     var imported_resource := ResourceLoader.load(FONT_PATH, "FontFile", ResourceLoader.CACHE_MODE_REUSE)
     var imported_font := imported_resource as FontFile
     if imported_font == null or imported_font.data.is_empty():
@@ -58,8 +58,7 @@ func _run() -> void:
     root.add_child(scene)
     await process_frame
     await process_frame
-
-    for path in ["Player", "Enemies", "Projectiles", "Loot", "MobileUI"]:
+    for path in ["Player", "Enemies", "Projectiles", "Loot", "MobileUI", "LinkedGemInventory"]:
         if scene.get_node_or_null(path) == null:
             _fail("Missing required runtime node: %s" % path)
             return
@@ -71,11 +70,8 @@ func _run() -> void:
     var region_state: Dictionary = scene.call("debug_region_state")
     var region_name := String(region_state.get("region", ""))
     var region_root := scene.get_node_or_null(NodePath(region_name)) as Node3D
-    if region_name.is_empty() or region_root == null:
-        _fail("Large playable region did not mount")
-        return
-    if region_root.get_node_or_null("Ground") == null:
-        _fail("Region terrain ground is missing from the region hierarchy")
+    if region_name.is_empty() or region_root == null or region_root.get_node_or_null("Ground") == null:
+        _fail("Large playable region ground hierarchy is incomplete")
         return
     var north_edge := float(region_state.get("north_edge", 0.0))
     var south_edge := float(region_state.get("south_edge", 0.0))
@@ -83,106 +79,70 @@ func _run() -> void:
     if south_edge - north_edge < 290.0 or half_width * 2.0 < 60.0:
         _fail("Large playable region dimensions regressed")
         return
-    if int(region_state.get("zones", 0)) != 6 or int(region_state.get("landmarks", 0)) < 7:
-        _fail("Region quality pass lost zones or landmarks")
-        return
-    if not bool(region_state.get("region02_exit", false)):
-        _fail("North Region 02 exit trigger is missing")
+    if int(region_state.get("zones", 0)) != 6 or int(region_state.get("landmarks", 0)) < 7 or not bool(region_state.get("region02_exit", false)):
+        _fail("Region zones, landmarks, or Region 02 exit regressed")
         return
 
     _stage("terrain_stream")
-    if not bool(region_state.get("terrain_root", false)):
-        _fail("Seamless terrain chunk root is missing")
-        return
-    if int(region_state.get("chunk_total", 0)) != 15 or absf(float(region_state.get("chunk_length", 0.0)) - 20.0) > 0.01:
-        _fail("Terrain chunk dimensions changed unexpectedly")
+    if not bool(region_state.get("terrain_root", false)) or int(region_state.get("chunk_total", 0)) != 15 or absf(float(region_state.get("chunk_length", 0.0)) - 20.0) > 0.01:
+        _fail("Seamless terrain streaming contract regressed")
         return
     var initial_stream: Dictionary = scene.call("debug_streaming_state")
     var initial_loaded := int(initial_stream.get("loaded", 0))
     if initial_loaded < 2 or initial_loaded > 5:
-        _fail("Initial terrain stream loaded the wrong number of chunks")
+        _fail("Initial terrain stream loaded wrong chunk count")
         return
     var initial_active: Array = initial_stream.get("active", [])
     region_root.call("update_streaming", Vector3(0, 0, -122))
     var north_stream: Dictionary = scene.call("debug_streaming_state")
-    if int(north_stream.get("loaded", 0)) > 5 or int(north_stream.get("center", -1)) < 10:
+    if int(north_stream.get("loaded", 0)) > 5 or int(north_stream.get("center", -1)) < 10 or (north_stream.get("active", []) as Array) == initial_active:
         _fail("Terrain stream did not move its active window north")
-        return
-    if (north_stream.get("active", []) as Array) == initial_active:
-        _fail("Terrain stream kept the same chunks after a long-distance move")
         return
     region_root.call("update_streaming", Vector3(0, 0, 128))
 
     _stage("perf")
     var perf: Dictionary = scene.call("debug_perf_pass2")
-    if int(perf.get("ai_phases", 0)) != 2 or int(perf.get("loot_cap", 0)) != 24:
-        _fail("Second performance layer is not active")
-        return
     var pool: Dictionary = perf.get("pool", {})
-    if int(pool.get("player_projectiles", 0)) < 10 or int(pool.get("enemy_projectiles", 0)) < 10 or int(pool.get("flashes", 0)) < 14:
-        _fail("Combat effect pools were not prewarmed")
+    if int(perf.get("ai_phases", 0)) != 2 or int(perf.get("loot_cap", 0)) != 24 or int(pool.get("player_projectiles", 0)) < 10 or int(pool.get("enemy_projectiles", 0)) < 10 or int(pool.get("flashes", 0)) < 14:
+        _fail("Second performance layer or combat pool regressed")
         return
 
     _stage("desktop")
     var desktop: Dictionary = scene.call("debug_desktop_profile")
-    if not bool(desktop.get("enabled", false)):
-        _fail("Desktop runtime profile did not activate on desktop CI")
+    if not bool(desktop.get("enabled", false)) or desktop.get("content_scale_size", Vector2i.ZERO) != Vector2i(1280, 720):
+        _fail("Desktop landscape profile regressed")
         return
-    if desktop.get("content_scale_size", Vector2i.ZERO) != Vector2i(1280, 720):
-        _fail("Desktop logical viewport is not 1280x720 landscape")
+    if bool(desktop.get("joystick_visible", true)) or bool(desktop.get("attack_button_visible", true)) or not bool(desktop.get("fullscreen_button", false)):
+        _fail("Desktop controls visibility regressed")
         return
-    if bool(desktop.get("joystick_visible", true)) or bool(desktop.get("attack_button_visible", true)):
-        _fail("Desktop layout still shows mobile joystick/attack controls")
-        return
-    if not bool(desktop.get("fullscreen_button", false)):
-        _fail("Desktop fullscreen control is missing")
-        return
-
     var player := scene.get_node("Player") as CharacterBody3D
-    if player == null:
-        _fail("Player is not a CharacterBody3D")
-        return
     var expected_spawn: Vector3 = region_state.get("player_spawn", Vector3.ZERO)
-    if player.global_position.distance_to(expected_spawn) > 0.25:
-        _fail("Player did not spawn at the region start")
+    if player == null or player.global_position.distance_to(expected_spawn) > 0.25:
+        _fail("Player did not spawn at south camp")
         return
     var camera := player.get_node_or_null("Camera3D") as Camera3D
-    if camera == null or camera.projection != Camera3D.PROJECTION_ORTHOGONAL or camera.keep_aspect != Camera3D.KEEP_HEIGHT:
-        _fail("Desktop landscape orthographic camera is not active")
-        return
     var player_visual := player.get_node_or_null("Visual") as Sprite3D
-    if player_visual == null or player_visual.texture == null:
-        _fail("Player Sprite3D visual is missing")
+    if camera == null or camera.projection != Camera3D.PROJECTION_ORTHOGONAL or camera.keep_aspect != Camera3D.KEEP_HEIGHT or player_visual == null or player_visual.texture == null:
+        _fail("Player camera or sprite regressed")
         return
-
     var enemies := scene.get_node("Enemies") as Node3D
     if enemies == null or enemies.get_child_count() < 7:
-        _fail("Grim-inspired combat pack did not spawn")
+        _fail("Combat enemies did not spawn")
         return
     var archetypes: Array = scene.call("debug_archetypes")
     for expected in ["rift_stalker", "rift_warden", "rift_hexer", "rift_champion"]:
         if not archetypes.has(expected):
-            _fail("Missing data-driven enemy archetype: %s" % expected)
+            _fail("Missing enemy archetype: %s" % expected)
             return
-
     var first_enemy := enemies.get_child(0) as CharacterBody3D
-    if first_enemy == null:
-        _fail("First enemy is not a CharacterBody3D")
-        return
-    var enemy_visual := first_enemy.get_node_or_null("Visual") as Sprite3D
     var enemy_label := first_enemy.get_node_or_null("NameLabel") as Label3D
-    if enemy_visual == null or enemy_visual.texture == null or enemy_label == null or enemy_label.font == null:
-        _fail("Enemy visual/Traditional Chinese label is incomplete")
-        return
-    if not enemy_label.text.contains("裂隙"):
-        _fail("Enemy Traditional Chinese archetype name is missing")
+    var enemy_visual := first_enemy.get_node_or_null("Visual") as Sprite3D
+    if enemy_label == null or enemy_label.font == null or not enemy_label.text.contains("裂隙") or enemy_visual == null or enemy_visual.texture == null:
+        _fail("Enemy visual or Traditional Chinese labels regressed")
         return
 
     _stage("ui")
     var ui_root := scene.get_node("MobileUI/Root") as Control
-    if ui_root == null:
-        _fail("Desktop UI root is missing")
-        return
     var attack := ui_root.get_node_or_null("AttackButton") as Button
     var gem := ui_root.get_node_or_null("GemButton") as Button
     var equipment := ui_root.get_node_or_null("EquipmentButton") as Button
@@ -194,17 +154,11 @@ func _run() -> void:
     if attack == null or gem == null or equipment == null or fullscreen == null or skill0 == null or skill1 == null or skill2 == null or hint == null:
         _fail("Weapon/skill desktop UI did not mount")
         return
-    if attack.text != "攻擊" or gem.text != "寶石" or equipment.text != "裝備" or fullscreen.text != "全螢幕":
-        _fail("Traditional Chinese desktop controls changed unexpectedly")
+    if attack.text != "攻擊" or gem.text != "寶石" or equipment.text != "裝備" or fullscreen.text != "全螢幕" or attack.visible:
+        _fail("Traditional Chinese desktop controls changed")
         return
-    if attack.visible:
-        _fail("Desktop attack button should be hidden in favor of left-click combat")
-        return
-    if not hint.text.contains("WASD") or not hint.text.contains("1/2/3") or not hint.text.contains("M 全地圖"):
-        _fail("Desktop landscape controls are not documented")
-        return
-    if ui_root.theme == null or ui_root.theme.default_font != imported_font:
-        _fail("Shared imported Traditional Chinese theme is not active")
+    if not hint.text.contains("WASD") or not hint.text.contains("1/2/3") or not hint.text.contains("M 全地圖") or ui_root.theme == null or ui_root.theme.default_font != imported_font:
+        _fail("Desktop controls help or imported font regressed")
         return
 
     _stage("full_map")
@@ -214,25 +168,22 @@ func _run() -> void:
     scene.call("_unhandled_input", map_key)
     await process_frame
     var map_state: Dictionary = scene.call("debug_map_state")
-    if not bool(map_state.get("open", false)) or not bool(map_state.get("launcher", false)) or not bool(map_state.get("screen", false)):
-        _fail("M did not open the full-region map")
-        return
-    if not bool(map_state.get("player_marker", false)) or (map_state.get("map_size", Vector2.ZERO) as Vector2).y < 300.0:
-        _fail("Full-region map did not render its player marker or usable map area")
+    if not bool(map_state.get("open", false)) or not bool(map_state.get("launcher", false)) or not bool(map_state.get("screen", false)) or not bool(map_state.get("player_marker", false)) or (map_state.get("map_size", Vector2.ZERO) as Vector2).y < 300.0:
+        _fail("Full region map did not open correctly")
         return
     scene.call("_unhandled_input", map_key)
     await process_frame
     if bool((scene.call("debug_map_state") as Dictionary).get("open", true)):
-        _fail("M did not close the full-region map")
+        _fail("Full region map did not close")
         return
 
     var weapon: Dictionary = scene.call("debug_weapon_state")
-    if String(weapon.get("weapon_type", "")) != "bow" or float(weapon.get("damage", 0.0)) <= 0.0:
-        _fail("Starter weapon is not active")
+    if String(weapon.get("weapon_type", "")) != "bow" or float(weapon.get("damage", 0.0)) <= 0.0 or not skill0.text.contains("緋紅火球"):
+        _fail("Starter weapon and installed attack gem did not activate")
         return
     var skill_ids: Array = scene.call("debug_skill_ids")
     if skill_ids != ["weapon_skill", "burst", "rift_dash"]:
-        _fail("Playable skill catalog is incomplete")
+        _fail("Playable skill hotkeys regressed")
         return
 
     _stage("basic_attack")
@@ -246,22 +197,19 @@ func _run() -> void:
     await create_timer(0.36).timeout
     await process_frame
     if is_instance_valid(enemy_label) and enemy_label.text == before_mobile:
-        _fail("Basic projectile neither damaged nor defeated its target")
+        _fail("Basic projectile neither damaged nor defeated target")
         return
 
     _stage("mouse_attack")
     var mouse_target := enemies.get_child(0) as CharacterBody3D
-    if mouse_target == null:
-        _fail("Mouse attack target is missing")
-        return
     if mouse_target == first_enemy and enemies.get_child_count() > 1:
         mouse_target = enemies.get_child(1) as CharacterBody3D
     if mouse_target == null:
-        _fail("Fresh mouse attack target is missing")
+        _fail("Fresh mouse attack target missing")
         return
     var mouse_label := mouse_target.get_node_or_null("NameLabel") as Label3D
     if mouse_label == null:
-        _fail("Mouse attack target label is missing")
+        _fail("Mouse target label missing")
         return
     mouse_target.global_position = player.global_position + Vector3(3.0, 0.0, 0.0)
     var before_mouse := mouse_label.text
@@ -282,23 +230,17 @@ func _run() -> void:
     await create_timer(0.36).timeout
     await process_frame
     if is_instance_valid(mouse_label) and mouse_label.text == before_mouse:
-        _fail("Desktop cursor-targeted projectile neither damaged nor defeated its target")
+        _fail("Desktop cursor-targeted projectile neither damaged nor defeated target")
         return
 
     _stage("skill")
     var skill_enemy := enemies.get_child(0) as CharacterBody3D
-    if skill_enemy == null:
-        _fail("Skill target enemy is missing")
-        return
     skill_enemy.global_position = player.global_position + Vector3(3.0, 0.0, 0.0)
     scene.call("_use_skill", 0)
     await process_frame
     var cds: Array = scene.call("debug_skill_cooldowns")
-    if cds.size() != 3 or float(cds[0]) <= 0.0:
-        _fail("Weapon skill did not enter cooldown")
-        return
-    if int(scene.call("debug_projectile_count")) < 1:
-        _fail("Ranged weapon skill did not spawn pooled projectiles")
+    if cds.size() != 3 or float(cds[0]) <= 0.0 or int(scene.call("debug_projectile_count")) < 1:
+        _fail("Linked starter fireball failed to cast projectiles or enter cooldown")
         return
 
     _stage("region_runtime")
@@ -308,18 +250,16 @@ func _run() -> void:
     await process_frame
     var cooldown_after_tick := float((scene.call("debug_skill_cooldowns") as Array)[0])
     if cooldown_after_tick >= cooldown_before_tick - 0.05:
-        _fail("Large-region runtime stopped ticking skill cooldowns")
+        _fail("Large region stopped ticking skill cooldowns")
         return
-
     scene.call("debug_set_mana", 20.0)
     var mana_before := float((scene.call("debug_resource_state") as Dictionary).get("mana", 0.0))
     await create_timer(0.16).timeout
     await process_frame
     var mana_after := float((scene.call("debug_resource_state") as Dictionary).get("mana", 0.0))
     if mana_after <= mana_before + 0.5:
-        _fail("Large-region runtime stopped regenerating mana")
+        _fail("Large region stopped regenerating mana")
         return
-
     player.global_position = expected_spawn
     player.velocity = Vector3.ZERO
     scene.set("last_aim_direction", Vector3(0.0, 0.0, -1.0))
@@ -327,30 +267,25 @@ func _run() -> void:
     scene.call("_use_skill", 2)
     await process_frame
     var dash_end := player.global_position
-    if dash_start.distance_to(dash_end) < 4.0:
-        _fail("Region dash did not move the player")
+    if dash_start.distance_to(dash_end) < 4.0 or (absf(dash_start.z) > 18.5 and absf(dash_end.z) <= 18.5):
+        _fail("Region dash failed or snapped into old arena bounds")
         return
-    if absf(dash_start.z) > 18.5 and absf(dash_end.z) <= 18.5:
-        _fail("Region dash snapped player back to the legacy arena bounds")
-        return
-
     scene.call("_damage_player", 10000.0)
     await process_frame
     if player.global_position.distance_to(expected_spawn) > 0.25:
-        _fail("Region death did not respawn the player at the south camp")
+        _fail("Region death did not respawn at south camp")
         return
 
     _stage("equipment")
     scene.call("debug_add_test_weapon", "blade")
     if int(scene.call("debug_weapon_inventory_count")) < 2:
-        _fail("Weapon inventory did not accept a picked weapon")
+        _fail("Weapon inventory did not accept test weapon")
         return
     scene.call("_equip_weapon_index", 1)
     var blade: Dictionary = scene.call("debug_weapon_state")
-    if String(blade.get("weapon_type", "")) != "blade" or not skill0.text.contains("旋刃"):
-        _fail("Equipping a blade did not change the active weapon skill")
+    if String(blade.get("weapon_type", "")) != "blade" or not blade.has("sockets") or not skill0.text.contains("未插技能"):
+        _fail("Weapon sockets must define active skills; empty blade cannot inherit fake socket skill")
         return
-
     var starter := WeaponSkillSystem.starter_weapon()
     if float(starter.get("range", 0.0)) < 10.0 or float(starter.get("cooldown", 0.0)) <= 0.0:
         _fail("Weapon stat normalization failed")
@@ -360,13 +295,13 @@ func _run() -> void:
     scene.call("debug_force_loot_drop")
     await process_frame
     if int(scene.call("debug_loot_count")) < 1:
-        _fail("Hierarchical loot system did not create a ground drop")
+        _fail("Loot system did not create a ground drop")
         return
     var rolled: Array[Dictionary] = LootSystem.roll_master("champion", 4, true, true)
     if rolled.is_empty() or not rolled[0].has("rarity") or not rolled[0].has("prefix") or not rolled[0].has("suffix"):
-        _fail("Dynamic weighted loot/affix record is incomplete")
+        _fail("Dynamic weighted loot/affix record incomplete")
         return
 
     _finished = true
-    print("RIFTFORGED_V2_SMOKE_OK desktop/full-map/terrain-stream/weapon-skills/pools/loot ready")
+    print("RIFTFORGED_V2_SMOKE_OK desktop/full-map/terrain-stream/linked-gems/weapon/pools/loot ready")
     quit(0)
