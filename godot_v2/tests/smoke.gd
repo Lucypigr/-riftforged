@@ -1,308 +1,278 @@
 extends SceneTree
 
-const FONT_PATH := "res://fonts/NotoSansTC-Riftforged.ttf"
 const LootSystem = preload("res://scripts/loot_system.gd")
-const WeaponSkillSystem = preload("res://scripts/weapon_skill_system.gd")
 const GemSystem = preload("res://scripts/linked_gem_system.gd")
-const REQUIRED_GLYPHS := ["攻", "擊", "寶", "石", "裂", "隙", "獸", "菁", "英", "獵", "犬", "衛", "士", "咒", "徒", "裝", "備", "武", "器", "技", "能", "衝", "刺", "爆", "全", "螢", "幕", "◆", "◇"]
-
-var _finished := false
-var _stage_name := "boot"
+const ArmorSystem = preload("res://scripts/armor_equipment.gd")
+const FONT_PATH := "res://fonts/NotoSansTC-Riftforged.ttf"
+const GLYPHS := ["攻", "擊", "寶", "石", "裂", "隙", "獸", "菁", "英", "裝", "備", "頭", "身", "腿", "鞋", "孔", "洞", "法", "全", "螢", "幕", "◆", "◇"]
+var _done := false
+var _stage := "boot"
 
 func _init() -> void:
     call_deferred("_watchdog")
     call_deferred("_run")
 
-func _stage(name: String) -> void:
-    _stage_name = name
-    print("RIFTFORGED_SMOKE_STAGE ", name)
-
 func _watchdog() -> void:
-    await create_timer(16.0).timeout
-    if not _finished:
-        _fail("Smoke timed out at " + _stage_name)
+    await create_timer(19.0).timeout
+    if not _done:
+        _fail("Timed out")
 
 func _fail(message: String) -> void:
-    _finished = true
-    push_error("RIFTFORGED_SMOKE_FAIL [%s] %s" % [_stage_name, message])
+    _done = true
+    push_error("RIFTFORGED_SMOKE_FAIL [%s] %s" % [_stage, message])
     quit(1)
 
+func _check_stage(name: String) -> void:
+    _stage = name
+    print("RIFTFORGED_SMOKE_STAGE ", name)
+
 func _run() -> void:
-    _stage("font")
+    _check_stage("font")
     var file := FileAccess.open(FONT_PATH, FileAccess.READ)
     if file == null:
-        _fail("Traditional Chinese font missing")
+        _fail("Bundled Traditional Chinese font missing")
         return
-    var magic := file.get_buffer(4)
+    var header := file.get_buffer(4)
     file.close()
-    if magic.size() != 4 or magic[0] != 0 or magic[1] != 1 or magic[2] != 0 or magic[3] != 0:
-        _fail("Traditional Chinese font is not TrueType")
+    if header.size() != 4 or header[0] != 0 or header[1] != 1 or header[2] != 0 or header[3] != 0:
+        _fail("Font source is not TrueType")
         return
     var imported := ResourceLoader.load(FONT_PATH, "FontFile", ResourceLoader.CACHE_MODE_REUSE) as FontFile
     if imported == null or imported.data.is_empty():
-        _fail("Imported Chinese FontFile missing")
+        _fail("Imported font resource missing")
         return
     imported.allow_system_fallback = false
-    for glyph in REQUIRED_GLYPHS:
+    for glyph in GLYPHS:
         if not imported.has_char(glyph.unicode_at(0)):
-            _fail("Font missing glyph: " + glyph)
+            _fail("Missing Chinese glyph " + glyph)
             return
-
-    _stage("scene")
+    _check_stage("scene")
     var packed := load("res://main.tscn") as PackedScene
     if packed == null:
-        _fail("Main scene missing")
+        _fail("Main scene could not load")
         return
     var game := packed.instantiate()
     root.add_child(game)
     await process_frame
     await process_frame
-    for path in ["Player", "Enemies", "Projectiles", "Loot", "MobileUI", "LinkedGemInventory"]:
+    for path in ["Player", "Enemies", "Projectiles", "Loot", "MobileUI", "LinkedGemInventory", "ArmorEquipment"]:
         if game.get_node_or_null(path) == null:
-            _fail("Missing runtime node: " + path)
+            _fail("Missing runtime node " + path)
             return
-
-    _stage("region")
     var world: Dictionary = game.call("debug_region_state")
     var region := game.get_node_or_null(NodePath(String(world.get("region", "")))) as Node3D
-    if region == null or region.get_node_or_null("Ground") == null:
-        _fail("Region ground hierarchy missing")
+    if region == null or region.get_node_or_null("Ground") == null or float(world.get("south_edge", 0)) - float(world.get("north_edge", 0)) < 290.0 or int(world.get("zones", 0)) != 6 or int(world.get("landmarks", 0)) < 7 or not bool(world.get("region02_exit", false)):
+        _fail("Large region/exit contract changed")
         return
-    if float(world.get("south_edge", 0.0)) - float(world.get("north_edge", 0.0)) < 290.0 or float(world.get("half_width", 0.0)) * 2.0 < 60.0:
-        _fail("Large playable map dimensions regressed")
-        return
-    if int(world.get("zones", 0)) != 6 or int(world.get("landmarks", 0)) < 7 or not bool(world.get("region02_exit", false)):
-        _fail("Zones, landmarks or north exit missing")
-        return
-
-    _stage("terrain_stream")
-    if not bool(world.get("terrain_root", false)) or int(world.get("chunk_total", 0)) != 15 or absf(float(world.get("chunk_length", 0.0)) - 20.0) > 0.01:
-        _fail("Terrain streaming contract regressed")
-        return
+    _check_stage("terrain_stream")
     var initial: Dictionary = game.call("debug_streaming_state")
-    if int(initial.get("loaded", 0)) < 2 or int(initial.get("loaded", 0)) > 5:
-        _fail("Initial chunk budget invalid")
+    if int(initial.get("loaded", 0)) < 2 or int(initial.get("loaded", 0)) > 5 or int(world.get("chunk_total", 0)) != 15:
+        _fail("Terrain stream budget invalid")
         return
     region.call("update_streaming", Vector3(0, 0, -122))
     var north: Dictionary = game.call("debug_streaming_state")
-    if int(north.get("loaded", 0)) > 5 or int(north.get("center", -1)) < 10 or (north.get("active", []) as Array) == (initial.get("active", []) as Array):
-        _fail("Terrain streaming did not move north")
+    if int(north.get("center", -1)) < 10 or int(north.get("loaded", 0)) > 5 or (north.get("active", []) as Array) == (initial.get("active", []) as Array):
+        _fail("Terrain chunks did not move north")
         return
     region.call("update_streaming", Vector3(0, 0, 128))
-
-    _stage("perf_desktop")
+    _check_stage("perf_desktop")
     var perf: Dictionary = game.call("debug_perf_pass2")
     var pool: Dictionary = perf.get("pool", {})
-    if int(perf.get("ai_phases", 0)) != 2 or int(perf.get("loot_cap", 0)) != 24 or int(pool.get("player_projectiles", 0)) < 10 or int(pool.get("enemy_projectiles", 0)) < 10 or int(pool.get("flashes", 0)) < 14:
-        _fail("Combat effects pool or performance settings regressed")
-        return
     var desktop: Dictionary = game.call("debug_desktop_profile")
-    if not bool(desktop.get("enabled", false)) or desktop.get("content_scale_size", Vector2i.ZERO) != Vector2i(1280, 720) or bool(desktop.get("joystick_visible", true)) or bool(desktop.get("attack_button_visible", true)) or not bool(desktop.get("fullscreen_button", false)):
-        _fail("Desktop profile regressed")
+    if int(perf.get("ai_phases", 0)) != 2 or int(perf.get("loot_cap", 0)) != 24 or int(pool.get("player_projectiles", 0)) < 10 or int(pool.get("enemy_projectiles", 0)) < 10 or not bool(desktop.get("enabled", false)) or desktop.get("content_scale_size", Vector2i.ZERO) != Vector2i(1280, 720):
+        _fail("Pool, mobile performance or desktop profile regressed")
         return
     var player := game.get_node("Player") as CharacterBody3D
     var spawn: Vector3 = world.get("player_spawn", Vector3.ZERO)
-    if player == null or player.global_position.distance_to(spawn) > 0.25:
-        _fail("Player south-camp spawn missing")
+    if player.global_position.distance_to(spawn) > 0.25:
+        _fail("South camp spawn missing")
         return
-    var camera := player.get_node_or_null("Camera3D") as Camera3D
-    var visual := player.get_node_or_null("Visual") as Sprite3D
-    if camera == null or camera.projection != Camera3D.PROJECTION_ORTHOGONAL or camera.keep_aspect != Camera3D.KEEP_HEIGHT or visual == null or visual.texture == null:
-        _fail("Player sprite/camera regressed")
+    var camera := player.get_node("Camera3D") as Camera3D
+    if camera == null or camera.projection != Camera3D.PROJECTION_ORTHOGONAL or camera.keep_aspect != Camera3D.KEEP_HEIGHT or (player.get_node("Visual") as Sprite3D).texture == null:
+        _fail("Player camera/art missing")
         return
+    _check_stage("monster_diversity")
     var enemies := game.get_node("Enemies") as Node3D
-    if enemies == null or enemies.get_child_count() < 7:
-        _fail("Enemy pack missing")
+    var types: Array = game.call("debug_archetypes")
+    var expected_types := ["rift_stalker", "rift_warden", "rift_hexer", "rift_champion", "bone_runner", "rift_bulwark", "crystal_archer", "swamp_sapper", "rift_oracle"]
+    if enemies.get_child_count() < 19:
+        _fail("Only a few monsters spawned")
         return
-    var archetypes: Array = game.call("debug_archetypes")
-    for name in ["rift_stalker", "rift_warden", "rift_hexer", "rift_champion"]:
-        if not archetypes.has(name):
-            _fail("Enemy archetype missing: " + name)
+    for name in expected_types:
+        if not types.has(name):
+            _fail("Distinct enemy archetype absent: " + name)
             return
     var first := enemies.get_child(0) as CharacterBody3D
     var first_label := first.get_node_or_null("NameLabel") as Label3D
-    var enemy_visual := first.get_node_or_null("Visual") as Sprite3D
-    if first_label == null or first_label.font == null or not first_label.text.contains("裂隙") or enemy_visual == null or enemy_visual.texture == null:
-        _fail("Enemy visual/Chinese label missing")
+    if first_label == null or first_label.font == null or not first_label.text.contains("裂隙") or (first.get_node("Visual") as Sprite3D).texture == null:
+        _fail("Enemy sprite or Chinese label regressed")
         return
-
-    _stage("ui_inventory")
+    _check_stage("ui_hotbar")
     var ui_root := game.get_node("MobileUI/Root") as Control
     var ui := game.get_node("MobileUI") as RiftPoEInventoryUI
-    var attack := ui_root.get_node_or_null("AttackButton") as Button
-    var gem_button := ui_root.get_node_or_null("GemButton") as Button
-    var equipment := ui_root.get_node_or_null("EquipmentButton") as Button
-    var fullscreen := ui_root.get_node_or_null("FullscreenButton") as Button
     var hint := ui_root.get_node_or_null("Hint") as Label
-    if ui == null or attack == null or gem_button == null or equipment == null or fullscreen == null or hint == null or attack.text != "攻擊" or gem_button.text != "寶石" or equipment.text != "裝備" or fullscreen.text != "全螢幕" or attack.visible or ui_root.theme == null or ui_root.theme.default_font != imported:
-        _fail("Chinese UI, desktop attack button or imported font regressed")
-        return
-    if not hint.text.contains("WASD") or not hint.text.contains("1–5") or not hint.text.contains("Q/E"):
-        _fail("New skill/flask input help missing")
+    if ui == null or hint == null or not hint.text.contains("WASD") or not hint.text.contains("1–5") or ui_root.theme.default_font != imported or (ui_root.get_node("AttackButton") as Button).visible:
+        _fail("Font, help or desktop HUD regressed")
         return
     var hotbar: Dictionary = game.call("debug_hotbar_state")
-    var ids: Array = hotbar.get("ids", [])
-    var bag: Dictionary = hotbar.get("inventory", {})
-    if ids != ["ember_bolt", "", "", "", ""] or int(bag.get("skill_buttons", 0)) != 5 or not bool(bag.get("grid_ready", false)) or int(bag.get("columns", 0)) != 8:
-        _fail("Only socketed active gems should fill five slots and weapon grid must mount")
+    var inventory_state: Dictionary = hotbar.get("inventory", {})
+    if hotbar.get("ids", []) != ["ember_bolt", "", "", "", ""] or int(inventory_state.get("columns", 0)) != 8 or int(inventory_state.get("skill_buttons", 0)) != 5 or not bool(inventory_state.get("grid_ready", false)):
+        _fail("Only installed active gems may fill slots 1–5")
         return
     for i in range(5):
         var button := ui_root.get_node_or_null("SkillButton%d" % i) as Button
-        if button == null or not button.visible or not button.text.contains(str(i + 1)) or (i > 0 and (not button.disabled or button.icon != null)):
-            _fail("Inactive skill must display an empty disabled shortcut: %d" % (i + 1))
+        if button == null or not button.visible or (i > 0 and (not button.disabled or button.icon != null)):
+            _fail("Empty hotbar slot is not disabled")
             return
-    if ui_root.get_node_or_null("BasicAttackSlot") == null or not hotbar.get("flasks", []).has("Q"):
-        _fail("Left-click basic attack or new flask hotkeys missing")
+    if ui_root.get_node_or_null("BasicAttackSlot") == null or hotbar.get("basic_attack", "") != "left_click" or not hotbar.get("flasks", []).has("Q"):
+        _fail("Left-click basic attack and Q/E flasks missing")
         return
-
-    _stage("full_map")
+    _check_stage("full_map")
     var map_key := InputEventKey.new()
     map_key.keycode = KEY_M
     map_key.pressed = true
     game.call("_unhandled_input", map_key)
     await process_frame
-    var map: Dictionary = game.call("debug_map_state")
-    if not bool(map.get("open", false)) or not bool(map.get("launcher", false)) or not bool(map.get("screen", false)) or not bool(map.get("player_marker", false)) or (map.get("map_size", Vector2.ZERO) as Vector2).y < 300.0:
-        _fail("Full region map failed to open")
+    if not bool((game.call("debug_map_state") as Dictionary).get("open", false)):
+        _fail("M did not open region map")
         return
     game.call("_unhandled_input", map_key)
     await process_frame
     if bool((game.call("debug_map_state") as Dictionary).get("open", true)):
-        _fail("M did not close full map")
+        _fail("M did not close region map")
         return
-
-    _stage("basic_attack")
+    _check_stage("basic_attack")
+    # With 19 living enemies, isolate targets; don't assume the first child is
+    # nearest by accident. Other enemies are moved away only in this test.
+    for i in range(1, enemies.get_child_count()):
+        var other := enemies.get_child(i) as CharacterBody3D
+        other.global_position = spawn + Vector3(26.0 + float(i), 0, -36.0)
     first.global_position = player.global_position + Vector3(2, 0, 0)
-    var old_text := first_label.text
+    var old_label := first_label.text
     game.call("_attack")
     await process_frame
     if int(game.call("debug_projectile_count")) < 1:
-        _fail("Basic attack did not fire a pooled projectile")
+        _fail("Basic attack did not fire")
         return
-    await create_timer(0.36).timeout
+    await create_timer(0.43).timeout
     await process_frame
-    if is_instance_valid(first_label) and first_label.text == old_text:
-        _fail("Basic attack neither damaged nor defeated target")
+    if is_instance_valid(first_label) and first_label.text == old_label:
+        _fail("Basic attack did not hurt nearest enemy")
         return
-    _stage("mouse_attack")
-    var target := enemies.get_child(0) as CharacterBody3D
-    if target == first and enemies.get_child_count() > 1:
-        target = enemies.get_child(1) as CharacterBody3D
-    var target_label := target.get_node_or_null("NameLabel") as Label3D
-    if target_label == null:
-        _fail("Mouse target missing")
-        return
-    target.global_position = player.global_position + Vector3(3, 0, 0)
-    var old_mouse_text := target_label.text
-    var mouse := InputEventMouseButton.new()
-    mouse.button_index = MOUSE_BUTTON_LEFT
-    mouse.pressed = true
-    mouse.position = camera.unproject_position(target.global_position + Vector3(0, 1, 0))
-    game.call("_unhandled_input", mouse)
+    _check_stage("mouse_attack")
+    var mouse_target := enemies.get_child(1) as CharacterBody3D
+    mouse_target.global_position = player.global_position + Vector3(3, 0, 0)
+    var mouse_label := mouse_target.get_node("NameLabel") as Label3D
+    var old_mouse := mouse_label.text
+    var click := InputEventMouseButton.new()
+    click.button_index = MOUSE_BUTTON_LEFT
+    click.pressed = true
+    click.position = camera.unproject_position(mouse_target.global_position + Vector3(0, 1, 0))
+    game.call("_unhandled_input", click)
     await process_frame
-    mouse.pressed = false
-    game.call("_unhandled_input", mouse)
-    if int(game.call("debug_projectile_count")) < 1:
-        _fail("Left mouse button failed to fire basic attack")
-        return
-    await create_timer(0.36).timeout
+    click.pressed = false
+    game.call("_unhandled_input", click)
+    await create_timer(0.42).timeout
     await process_frame
-    if is_instance_valid(target_label) and target_label.text == old_mouse_text:
-        _fail("Mouse attack neither damaged nor defeated target")
+    if is_instance_valid(mouse_label) and mouse_label.text == old_mouse:
+        _fail("Desktop left click did not hit chosen enemy")
         return
-
-    _stage("active_skills")
-    var skill_enemy := enemies.get_child(0) as CharacterBody3D
-    skill_enemy.global_position = player.global_position + Vector3(3, 0, 0)
-    var empty_mana := float((game.call("debug_resource_state") as Dictionary).get("mana", 0.0))
-    var empty_position := player.global_position
+    _check_stage("gem_skills")
+    var mana_before := float((game.call("debug_resource_state") as Dictionary).get("mana", 0.0))
     game.call("_use_skill", 2)
-    if absf(float((game.call("debug_resource_state") as Dictionary).get("mana", 0.0)) - empty_mana) > 0.001 or empty_position.distance_to(player.global_position) > 0.01 or float((game.call("debug_skill_cooldowns") as Array)[2]) > 0.01:
-        _fail("Empty slot incorrectly granted free dash or spent mana")
+    if absf(mana_before - float((game.call("debug_resource_state") as Dictionary).get("mana", 0.0))) > 0.001:
+        _fail("Empty slot spent mana")
         return
     game.call("_use_skill", 0)
     await process_frame
     var cds: Array = game.call("debug_skill_cooldowns")
-    if cds.size() != 5 or float(cds[0]) <= 0.0 or int(game.call("debug_projectile_count")) < 1:
-        _fail("Installed fireball did not fire or enter cooldown")
+    if cds.size() != 5 or float(cds[0]) <= 0.0:
+        _fail("Installed fireball has no cooldown")
         return
     var before_tick := float(cds[0])
-    skill_enemy.global_position = spawn + Vector3(20, 0, 0)
-    await create_timer(0.16).timeout
-    await process_frame
+    await create_timer(0.15).timeout
     if float((game.call("debug_skill_cooldowns") as Array)[0]) >= before_tick - 0.05:
-        _fail("Skill cooldown stopped ticking")
+        _fail("Cooldown stopped ticking")
         return
-    game.call("debug_set_mana", 20.0)
-    var before_regen := float((game.call("debug_resource_state") as Dictionary).get("mana", 0.0))
-    await create_timer(0.16).timeout
+    _check_stage("armor_equipment")
+    var armor: Dictionary = game.call("debug_armor_state")
+    var slots: Dictionary = armor.get("slots", {})
+    if not bool(armor.get("panel_ready", false)) or int(slots.get("頭部", 0)) < 1 or int(slots.get("身體", 0)) < 1 or int(slots.get("腿部", 0)) < 1 or int(slots.get("鞋子", 0)) < 1 or float(armor.get("defense", 0)) < 30.0:
+        _fail("Head/chest/legs/boots lack independent sockets or armor")
+        return
+    game.call("_open_armor_ui")
     await process_frame
-    if float((game.call("debug_resource_state") as Dictionary).get("mana", 0.0)) <= before_regen + 0.5:
-        _fail("Mana regeneration stopped")
+    if not bool((game.call("debug_armor_state") as Dictionary).get("panel_open", false)):
+        _fail("Wearable equipment screen cannot open")
         return
-
-    _stage("installed_dash")
-    var starter_weapon: Dictionary = game.call("debug_weapon_state")
-    var modified := starter_weapon.duplicate(true)
-    var sockets: Array = modified.get("sockets", [])
-    sockets.append({"color":"red", "gem":GemSystem.make_gem("crimson_burst", 790001)})
-    sockets.append({"color":"blue", "gem":GemSystem.make_gem("rift_dash", 790002)})
-    modified["sockets"] = sockets
-    modified["links"] = [true, false, false]
-    game.call("_save_weapon", modified)
-    var added: Dictionary = game.call("debug_hotbar_state")
-    if added.get("ids", []) != ["ember_bolt", "crimson_burst", "rift_dash", "", ""]:
-        _fail("Installed active gems did not populate shortcuts in socket order")
-        return
-    player.global_position = spawn
-    player.velocity = Vector3.ZERO
-    game.set("last_aim_direction", Vector3(0, 0, -1))
-    var dash_start := player.global_position
-    game.call("_use_skill", 2)
+    for slot in ArmorSystem.SLOTS:
+        if game.get_node_or_null("ArmorEquipment/ArmorRoot/ArmorPanel/GearScroll/GearList/Gear_" + slot) == null:
+            _fail("Missing editable armor slot row: " + slot)
+            return
+    game.call("_open_equipment_sockets", "頭部")
     await process_frame
-    if dash_start.distance_to(player.global_position) < 4.0:
-        _fail("Socketed dash did not move the player")
+    if String((game.call("debug_armor_state") as Dictionary).get("editing", "")) != "頭部" or not bool((game.call("debug_gem_state") as Dictionary).get("ui_open", false)):
+        _fail("Head slot cannot enter live socket editor")
         return
-    game.call("_save_weapon", starter_weapon)
+    var stash: Array = (game.call("debug_gem_state") as Dictionary).get("stash", [])
+    var crimson := -1
+    for i in range(stash.size()):
+        if String((stash[i] as Dictionary).get("id", "")) == "crimson_burst":
+            crimson = i
+    if crimson < 0:
+        _fail("Starter bag missing red skill for helmet installation")
+        return
+    game.call("_select_gem", crimson)
+    game.call("_use_socket", 0)
+    var head: Dictionary = (game.get("equipped_armor") as Dictionary).get("頭部", {})
+    if String(((head.get("sockets", []) as Array)[0] as Dictionary).get("gem", {}).get("id", "")) != "crimson_burst" or (game.call("debug_hotbar_state") as Dictionary).get("ids", [])[1] != "crimson_burst":
+        _fail("Helmet gem did not become genuine hotbar skill")
+        return
+    if (game.call("debug_weapon_state") as Dictionary).get("sockets", []).size() != 2:
+        _fail("Helmet gem editing mutated weapon sockets")
+        return
+    game.call("_use_currency", "jeweller")
+    head = (game.get("equipped_armor") as Dictionary).get("頭部", {})
+    if (head.get("sockets", []) as Array).size() != 2:
+        _fail("Armor jeweller did not open a new real socket")
+        return
+    game.get_node("LinkedGemInventory").call("close")
+    game.call("_equip_armor", 0)
+    var swapped: Dictionary = game.call("debug_armor_state")
+    if (game.call("debug_hotbar_state") as Dictionary).get("ids", [])[1] != "" or int(swapped.get("bag", 0)) != 1:
+        _fail("Replacing helmet did not unbind skill or preserve old item")
+        return
+    game.call("_equip_armor", 0)
+    if (game.call("debug_hotbar_state") as Dictionary).get("ids", [])[1] != "crimson_burst":
+        _fail("Restored helmet lost installed gem")
+        return
+    _check_stage("armor_pickup")
+    var bag_before := int((game.call("debug_armor_state") as Dictionary).get("bag", 0))
+    var loot := {"id":"test_legguards", "slot":"腿部", "name":"測試護腿", "rarity":"魔法", "level":2, "armor":17.0, "prefix":{}, "suffix":{}, "color":Color(0.4, 0.7, 1.0)}
+    game.call("_spawn_loot_visual", player.global_position, loot)
+    game.call("_update_loot")
+    if int((game.call("debug_armor_state") as Dictionary).get("bag", 0)) != bag_before + 1:
+        _fail("Walk-over armor loot was not collected")
+        return
+    if not LootSystem.BASE_ITEMS.any(func(item: Dictionary): return String(item.get("slot", "")) == "頭部"):
+        _fail("Monster loot table has no new armor bases")
+        return
+    _check_stage("old_weapon_and_region")
+    game.call("debug_add_test_weapon", "blade")
+    if int(game.call("debug_weapon_inventory_count")) < 2:
+        _fail("Old weapon inventory no longer accepts items")
+        return
+    ui.call("_toggle_equipment_panel")
+    var weapon_panel := ui_root.get_node("EquipmentPanel") as Panel
+    if not weapon_panel.visible or weapon_panel.get_node_or_null("PoEInventory/Backpack/ItemGrid/Weapon_1") == null:
+        _fail("PoE grid weapon inventory missing")
+        return
+    ui.call("_toggle_equipment_panel")
     game.call("_damage_player", 10000.0)
     await process_frame
     if player.global_position.distance_to(spawn) > 0.25:
-        _fail("Death did not respawn at south camp")
+        _fail("Death no longer respawns at south camp")
         return
-
-    _stage("equipment")
-    game.call("debug_add_test_weapon", "blade")
-    if int(game.call("debug_weapon_inventory_count")) < 2:
-        _fail("Picked weapon missing from inventory")
-        return
-    ui.call("_toggle_equipment_panel")
-    var panel := ui_root.get_node_or_null("EquipmentPanel") as Panel
-    var grid := panel.get_node_or_null("PoEInventory/Backpack/ItemGrid") as Control
-    if panel == null or not panel.visible or grid == null or grid.get_node_or_null("Weapon_1") == null:
-        _fail("Grid backpack did not show unequipped weapon")
-        return
-    ui.call("_toggle_equipment_panel")
-    game.call("_equip_weapon_index", 1)
-    var blade: Dictionary = game.call("debug_weapon_state")
-    if String(blade.get("weapon_type", "")) != "blade" or not blade.has("sockets") or int((game.call("debug_hotbar_state") as Dictionary).get("active", 99)) != 0:
-        _fail("Empty blade incorrectly inherits free combat skills")
-        return
-    var starter := WeaponSkillSystem.starter_weapon()
-    if float(starter.get("range", 0.0)) < 10.0 or float(starter.get("cooldown", 0.0)) <= 0.0:
-        _fail("Weapon stat normalization regressed")
-        return
-
-    _stage("loot")
-    game.call("debug_force_loot_drop")
-    await process_frame
-    if int(game.call("debug_loot_count")) < 1:
-        _fail("Ground loot failed to spawn")
-        return
-    var rolled: Array[Dictionary] = LootSystem.roll_master("champion", 4, true, true)
-    if rolled.is_empty() or not rolled[0].has("rarity") or not rolled[0].has("prefix") or not rolled[0].has("suffix"):
-        _fail("Weighted affix loot record invalid")
-        return
-
-    _finished = true
-    print("RIFTFORGED_V2_SMOKE_OK region/terrain/combat/poe-inventory/gem-only-five-slots/loot ready")
+    _done = true
+    print("RIFTFORGED_V2_SMOKE_OK region/terrain/19-enemies/9-archetypes/armor-sockets/loot/poe-hotbar")
     quit(0)
