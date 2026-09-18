@@ -1,7 +1,8 @@
 extends RefCounted
 class_name RiftLinkedGemSystem
 
-# Original Riftforged names and effects; colour, socket and linked support rules.
+# Original Riftforged names and effects; socket colours and linked support rules
+# are inspired by the equipment puzzle specified for this project.
 const MAX_SOCKETS := 6
 const COLORS := ["red", "green", "blue"]
 const GEMS := {
@@ -9,15 +10,16 @@ const GEMS := {
     "crimson_burst": {"name":"緋紅爆裂", "color":"red", "role":"attack", "tags":["area", "spell"], "base_damage":55.0, "cooldown":4.0, "mana":12.0, "text":"對附近敵人釋放範圍爆炸。"},
     "multishot": {"name":"翠綠多重投射", "color":"green", "role":"support", "tags":["projectile"], "text":"連線並符合投射物標籤時，投射物增加至三發；單發傷害降低。"},
     "chain": {"name":"翠綠連鎖", "color":"green", "role":"support", "tags":["projectile"], "text":"連線並符合投射物標籤時，命中後可跳至另外兩名附近敵人。"},
-    "swift_aura": {"name":"湛藍疾行光環", "color":"blue", "role":"aura", "tags":["aura"], "text":"可切換：移動速度提升 20%，造成傷害降低 15%。不必與其他寶石連線。"},
+    "swift_aura": {"name":"湛藍疾行光環", "color":"blue", "role":"aura", "tags":["aura"], "cooldown":0.25, "mana":0.0, "text":"可切換：移動速度提升 20%，造成傷害降低 15%。不必與其他寶石連線。"},
     "rift_trail": {"name":"湛藍裂隙足跡", "color":"blue", "role":"attack", "tags":["area", "movement"], "base_damage":20.0, "cooldown":1.0, "mana":12.0, "text":"啟動後移動時留下短暫裂隙傷害痕跡，再按一次關閉。"},
+    "rift_dash": {"name":"湛藍裂隙衝刺", "color":"blue", "role":"attack", "tags":["movement"], "base_damage":0.0, "cooldown":5.0, "mana":16.0, "text":"裝備後可配置至 1–5 技能鍵；向移動或瞄準方向快速位移。"},
 }
 
 static func make_gem(id: String, uid: int) -> Dictionary:
-    var gem_data: Dictionary = GEMS.get(id, {})
-    if gem_data.is_empty():
+    var data: Dictionary = GEMS.get(id, {})
+    if data.is_empty():
         return {}
-    return {"id":id, "uid":uid, "name":String(gem_data["name"]), "color":String(gem_data["color"]), "level":1, "refine":0}
+    return {"id":id, "uid":uid, "name":String(data["name"]), "color":String(data["color"]), "level":1, "refine":0}
 
 static func data(gem: Dictionary) -> Dictionary:
     return GEMS.get(String(gem.get("id", "")), {})
