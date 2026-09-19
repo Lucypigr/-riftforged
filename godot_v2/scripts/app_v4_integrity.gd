@@ -61,5 +61,29 @@ func _use_skill(slot: int) -> void:
             return
     super._use_skill(slot)
 
+func _warning_blast(center: Vector3, radius: float, damage: float, seconds: float, owner_id: int) -> void:
+    # Node3D.global_position requires a live scene-tree transform. The parent
+    # implementation positioned a newly constructed marker before add_child,
+    # resulting in !is_inside_tree() errors and misplaced danger indicators.
+    var marker := MeshInstance3D.new()
+    marker.name = "DangerTelegraph"
+    var disc := CylinderMesh.new()
+    disc.top_radius = radius
+    disc.bottom_radius = radius
+    disc.height = 0.03
+    marker.mesh = disc
+    var mat := StandardMaterial3D.new()
+    mat.albedo_color = Color(1.0, 0.13, 0.07, 0.38)
+    mat.emission_enabled = true
+    mat.emission = Color(1.0, 0.08, 0.06)
+    mat.emission_energy_multiplier = 1.6
+    mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    marker.material_override = mat
+    marker.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+    projectiles_root.add_child(marker)
+    marker.global_position = center + Vector3(0, 0.09, 0)
+    get_tree().create_timer(seconds).timeout.connect(_finish_warning.bind(marker, center, radius, damage, owner_id), CONNECT_ONE_SHOT)
+
 func debug_v4_builds() -> Dictionary:
     return V4_BUILDS.duplicate(true)
