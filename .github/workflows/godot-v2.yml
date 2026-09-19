@@ -51,34 +51,37 @@ jobs:
       - name: Import clean rebuild
         run: godot --headless --path godot_v2 --import --quit
 
-      # Obsolete multi-second cooldown and one-use flask assertions are
-      # superseded by the V4 mana and flask-charge tests.
+      # Explicit headless-only fixture runs the real portal before old suites;
+      # the CAMP-01 smoke below runs without it and verifies actual camp spawn.
       - name: Headless V4 combat and progression regression
-        run: godot --headless --path godot_v2 --script res://tests/v4_smoke.gd
+        run: godot --headless --path godot_v2 --script res://tests/v4_smoke.gd -- --camp01-legacy-combat
 
       - name: Headless V4 loot identity, builds and encounter integrity
-        run: godot --headless --path godot_v2 --script res://tests/v4_integrity_smoke.gd
+        run: godot --headless --path godot_v2 --script res://tests/v4_integrity_smoke.gd -- --camp01-legacy-combat
 
       - name: Headless linked-gem interaction smoke test
-        run: godot --headless --path godot_v2 --script res://tests/gem_smoke.gd
+        run: godot --headless --path godot_v2 --script res://tests/gem_smoke.gd -- --camp01-legacy-combat
 
       - name: Headless shared equipment inventory regression
-        run: godot --headless --path godot_v2 --script res://tests/unified_inventory_smoke.gd
+        run: godot --headless --path godot_v2 --script res://tests/unified_inventory_smoke.gd -- --camp01-legacy-combat
 
       - name: Headless equip, drag and inspection regression
-        run: godot --headless --path godot_v2 --script res://tests/equipment_interaction_smoke.gd
+        run: godot --headless --path godot_v2 --script res://tests/equipment_interaction_smoke.gd -- --camp01-legacy-combat
 
       - name: Headless mobile landscape touch and long-press regression
-        run: godot --headless --path godot_v2 --script res://tests/mobile_landscape_smoke.gd
+        run: godot --headless --path godot_v2 --script res://tests/mobile_landscape_smoke.gd -- --camp01-legacy-combat
 
       - name: Headless V5 two-finger input and integrated gem regression
-        run: godot --headless --path godot_v2 --script res://tests/v5_smoke.gd
+        run: godot --headless --path godot_v2 --script res://tests/v5_smoke.gd -- --camp01-legacy-combat
 
       - name: Headless configurable five-slot basic attack and gem mapping regression
-        run: godot --headless --path godot_v2 --script res://tests/configurable_hotbar_smoke.gd
+        run: godot --headless --path godot_v2 --script res://tests/configurable_hotbar_smoke.gd -- --camp01-legacy-combat
 
       - name: Headless V5-4 aiming, trajectory and touch-release regression
-        run: godot --headless --path godot_v2 --script res://tests/skill_aim_smoke.gd
+        run: godot --headless --path godot_v2 --script res://tests/skill_aim_smoke.gd -- --camp01-legacy-combat
+
+      - name: Headless CAMP-01 safe spawn, portal and inventory continuity
+        run: godot --headless --path godot_v2 --script res://tests/camp_smoke.gd
 
       - name: Export Web build
         run: |
