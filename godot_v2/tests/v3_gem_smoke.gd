@@ -82,7 +82,6 @@ func _run() -> void:
     if not _check(winning_seed >= 0, "no deterministic 5-percent success seed"):
         return
     rng.seed = winning_seed
-    # Exercise the actual enemy-death path, not an isolated model-only roll.
     game.call("_damage_enemy", 0, 9999999.0)
     var after_death: Dictionary = game.call("debug_gem_ground_state")
     if not _check((after_death["world"] as Array).size() == 1 and int(after_death["stash"]) == stash_before, "death must spawn one world gem, never directly give it to the player"):
@@ -106,7 +105,6 @@ func _run() -> void:
     if not _check((game.get("gem_inventory") as Array).size() == stash_before + 1, "duplicate pickup"):
         return
 
-    # Multiple ground gems are independent, and world cap applies only to equipment.
     player.global_position = game.get("region_map").call("clamp_player", world_pos + Vector3(12, 0, 0))
     game.call("_spawn_gem_ground", world_pos, "cleave")
     game.call("_spawn_gem_ground", world_pos + Vector3(3, 0, 0), "arc")
@@ -123,7 +121,8 @@ func _run() -> void:
     if not _check((game.get("gem_ground") as Array).is_empty() and (game.get("gem_inventory") as Array).size() == stash_before + 3, "second independent gem not received"):
         return
 
-    # Cast all 10 new actives via the actual 1-5 shortcut path, check mana and CD.
+    # Under V4 skills consume mana; no time cooldown is allowed. The short
+    # per-animation action interval must elapse between distinct test inputs.
     var armor: Dictionary = (game.get("equipped_armor") as Dictionary)["身體"]
     for i in range(ACTIVE.size()):
         var id: String = ACTIVE[i]
@@ -131,16 +130,16 @@ func _run() -> void:
         armor["sockets"] = [{"color":gem["color"], "gem":gem}]
         armor["links"] = []
         (game.get("equipped_armor") as Dictionary)["身體"] = armor.duplicate(true)
-        # Weapon's preexisting fireball is first shortcut; new chest skill second.
         game.set("player_mana", 500.0)
         game.call("_refresh_gameplay_ui")
+        if id == "arc":
+            var target := ((game.get("enemies") as Array)[0] as Dictionary).get("node") as CharacterBody3D
+            target.global_position = player.global_position + Vector3(2, 0, 0)
         game.call("_use_skill", 1)
         var timers: Array = game.get("skill_cooldowns")
-        if not _check(float(timers[1]) > 0.0 and float(game.get("player_mana")) < 500.0, "active gem did not cast: " + id):
+        if not _check(is_zero_approx(float(timers[1])) and float(game.get("player_mana")) < 500.0, "active gem failed mana-only cast: " + id):
             return
-        timers[1] = 0.0
-        game.set("skill_cooldowns", timers)
-        await process_frame
+        await create_timer(0.43).timeout
     _done = true
-    print("RIFTFORGED_V3_GEMS_OK pool=27 RNG/all-IDs/rates/death-floor/proximity/UID/multiple/10-casts")
+    print("RIFTFORGED_V3_GEMS_OK pool27/RNG/rates/death-floor/pickup/UID/multiple/10-mana-casts")
     quit(0)
