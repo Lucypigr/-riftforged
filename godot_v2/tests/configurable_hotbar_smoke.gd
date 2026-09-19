@@ -34,6 +34,7 @@ func _run() -> void:
         return
     var state: Dictionary = game.debug_configurable_hotbar()
     var assignments: Array = state["assignments"]
+    print("HOTBAR_INITIAL slots=", assignments, " primary=", state["primary"])
     if not _check(assignments.size() == 5 and String((assignments[4] as Dictionary).get("kind", "")) == "basic" and String((state["primary"] as Dictionary).get("primary_text", "")).contains("普攻"), "slot five is not the initially equipped basic attack"):
         return
     var first_gem: Dictionary = ((state["entries"] as Array)[0] as Dictionary).get("gem", {})
@@ -46,8 +47,6 @@ func _run() -> void:
     var entries: Array = state["entries"]
     if not _check(String((entries[0] as Dictionary).get("kind", "")) == "basic" and int(((entries[4] as Dictionary).get("gem", {}) as Dictionary).get("uid", 0)) == uid and String((state["primary"] as Dictionary).get("primary_text", "")).contains(String(first_gem["name"])), "assigning gem to slot five didn't move basic attack to its previous slot"):
         return
-    # The large button now emits skill_requested(4), and the actual game must
-    # use its corresponding gem and charge mana rather than fire a free shot.
     game.debug_set_mana(100.0)
     var mana_before := float(game.player_mana)
     hud.attack_button.pressed.emit()
@@ -69,7 +68,7 @@ func _run() -> void:
     game._choose_hotbar_slot(4)
     game._refresh_gameplay_ui()
     entries = (game.debug_configurable_hotbar()["entries"] as Array)
-    if not _check(String((entries[4] as Dictionary).get("kind", "")) == "empty" and not (hud.attack_button as Button).disabled == false, "manual clear reinstalled a gem or kept an empty primary enabled"):
+    if not _check(String((entries[4] as Dictionary).get("kind", "")) == "empty" and hud.attack_button.disabled, "manual clear reinstalled a gem or kept an empty primary enabled"):
         return
     game._pick_hotbar_source("gem", uid)
     game._choose_hotbar_slot(4)
