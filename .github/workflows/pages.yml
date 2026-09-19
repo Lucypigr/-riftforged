@@ -67,17 +67,19 @@ jobs:
           assert data[:4] == b'\x00\x01\x00\x00'
           PY
           godot --headless --path godot_v2 --import --quit
-          # Historical V3/V4 suites begin inside combat through the real portal
-          # using an explicit test-only CLI flag. Production remains camp-first.
+          # Historical V3/V4 suites enter combat through an explicit fixture.
           godot --headless --path godot_v2 --script res://tests/v4_smoke.gd -- --camp01-legacy-combat
           godot --headless --path godot_v2 --script res://tests/v4_integrity_smoke.gd -- --camp01-legacy-combat
           godot --headless --path godot_v2 --script res://tests/v3_gem_smoke.gd -- --camp01-legacy-combat
-          # No test flag: prove the exported game's default entry is the camp.
+          # Default production entry must remain camp-first.
           godot --headless --path godot_v2 --script res://tests/camp_smoke.gd
+          godot --headless --path godot_v2 --script res://tests/landscape_viewport_smoke.gd
           godot --headless --path godot_v2 --export-release "Web" "$GITHUB_WORKSPACE/_site/godot-v2/index.html"
           test -f _site/godot-v2/index.html
           test -n "$(find _site/godot-v2 -maxdepth 1 -name '*.wasm' -print -quit)"
           test -n "$(find _site/godot-v2 -maxdepth 1 -name '*.pck' -print -quit)"
+          # Fail the deployment if Safari's dynamic visible-height fix is absent.
+          grep -q '100dvh' _site/godot-v2/index.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

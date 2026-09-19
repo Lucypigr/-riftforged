@@ -83,6 +83,9 @@ jobs:
       - name: Headless CAMP-01 safe spawn, portal and inventory continuity
         run: godot --headless --path godot_v2 --script res://tests/camp_smoke.gd
 
+      - name: Headless short landscape fit and five-button visibility regression
+        run: godot --headless --path godot_v2 --script res://tests/landscape_viewport_smoke.gd
+
       - name: Export Web build
         run: |
           rm -rf "$GITHUB_WORKSPACE/godot-v2-web"
