@@ -35,6 +35,18 @@ func _run() -> void:
         return
     if not _check(game.get_node_or_null("SafeCamp/CampFloorCollision") != null and game.get_node_or_null("SafeCamp/CombatPortal") != null and game.get_node_or_null("CampInteractionHUD/CampOverlay/EnterCombatPortal") != null, "walkable floor or actual portal/button absent"):
         return
+    # The camp HUD belongs to its own CanvasLayer; it must NOT silently fall
+    # back to the platform's default font when rendering Traditional Chinese.
+    var overlay := game.get_node("CampInteractionHUD/CampOverlay") as Control
+    var caption := game.get_node("CampInteractionHUD/CampOverlay/CampStatus") as Label
+    var portal_button := game.get_node("CampInteractionHUD/CampOverlay/EnterCombatPortal") as Button
+    var portal_label := game.get_node("SafeCamp/CombatPortal/PortalName") as Label3D
+    var camp_label := game.get_node("SafeCamp/CampName") as Label3D
+    if not _check(overlay.theme != null and overlay.theme.default_font == game.ui_font and caption.has_theme_font_override("font") and caption.get_theme_font("font") == game.ui_font and portal_button.has_theme_font_override("font") and portal_button.get_theme_font("font") == game.ui_font and portal_label.font == game.ui_font and camp_label.font == game.ui_font, "camp text is not bound to the imported Traditional Chinese font"):
+        return
+    for glyph in ["營", "地", "進", "入", "裂", "隙", "傳", "送", "門", "安", "全", "區", "域"]:
+        if not _check(game.ui_font.has_char(glyph.unicode_at(0)), "camp font missing glyph: " + glyph):
+            return
     var initial_hp: float = game.player_hp
     var initial_mana: float = game.player_mana
     var initial_shots: int = game.projectile_serial
@@ -93,5 +105,5 @@ func _run() -> void:
     if not _check(mobile.debug_camp_state()["region"] == "combat" and mobile.debug_camp_state()["portal_uses"] == 1, "button activation did not enter combat exactly once"):
         return
     finished = true
-    print("RIFTFORGED_CAMP01_OK safe-spawn/floor/movement/no-damage/no-attack/proximity/PC-F/touch-button/inventory/boss/loot/streaming")
+    print("RIFTFORGED_CAMP01_OK safe-spawn/floor/movement/no-damage/no-attack/proximity/PC-F/touch-button/inventory/boss/loot/streaming/chinese-font")
     quit(0)
