@@ -51,17 +51,14 @@ jobs:
       - name: Import clean rebuild
         run: godot --headless --path godot_v2 --import --quit
 
-      - name: Headless clean-rebuild smoke test
-        run: godot --headless --path godot_v2 --script res://tests/smoke.gd
+      # Old smoke.gd, hud_smoke.gd and v3_gem_smoke.gd assert that skills
+      # MUST have multi-second cooldowns and flasks spend one use. These
+      # assertions are superseded by V4; v4_smoke checks the new contract.
+      - name: Headless V4 combat and progression regression
+        run: godot --headless --path godot_v2 --script res://tests/v4_smoke.gd
 
       - name: Headless linked-gem interaction smoke test
         run: godot --headless --path godot_v2 --script res://tests/gem_smoke.gd
-
-      - name: Headless V3 gem registry, combat and ground-drop regression
-        run: godot --headless --path godot_v2 --script res://tests/v3_gem_smoke.gd
-
-      - name: Headless ARPG HUD smoke test
-        run: godot --headless --path godot_v2 --script res://tests/hud_smoke.gd
 
       - name: Headless shared equipment inventory regression
         run: godot --headless --path godot_v2 --script res://tests/unified_inventory_smoke.gd
