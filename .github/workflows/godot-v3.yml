@@ -1,0 +1,22 @@
+name: V3 Gem Loot and Gameplay Regression
+on:
+  pull_request:
+    paths:
+      - 'godot_v2/**'
+      - '.github/workflows/godot-v3.yml'
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.7.2
+          include-templates: true
+      - name: Prepare traditional Chinese font
+        run: python3 godot_v2/tools/prepare_font.py --project godot_v2
+      - name: Clean project import
+        run: godot --headless --path godot_v2 --import --quit
+      - name: Full V3 registry, controlled RNG, actual death, ground pickup and 10 casts
+        run: godot --headless --path godot_v2 --script res://tests/v3_gem_smoke.gd
