@@ -67,7 +67,12 @@ jobs:
           assert data[:4] == b'\x00\x01\x00\x00'
           PY
           godot --headless --path godot_v2 --import --quit
-          godot --headless --path godot_v2 --script res://tests/smoke.gd
+          # The old smoke.gd requires multi-second cooldowns and one-use flasks.
+          # V4's live tests replace those obsolete expectations and exercise
+          # mana casting, charge flasks, loot identity, density and the boss.
+          godot --headless --path godot_v2 --script res://tests/v4_smoke.gd
+          godot --headless --path godot_v2 --script res://tests/v4_integrity_smoke.gd
+          godot --headless --path godot_v2 --script res://tests/v3_gem_smoke.gd
           godot --headless --path godot_v2 --export-release "Web" "$GITHUB_WORKSPACE/_site/godot-v2/index.html"
           test -f _site/godot-v2/index.html
 
