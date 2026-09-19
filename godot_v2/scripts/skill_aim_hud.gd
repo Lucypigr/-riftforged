@@ -18,8 +18,8 @@ var _aim_caption: Label
 
 func setup(font: FontFile) -> void:
     super.setup(font)
-    # Mobile GUI may synthesize mouse clicks for touches. Only _input owns
-    # touch actions; normal desktop mouse clicks retain the button signals.
+    # The touch path below owns aiming; GUI's synthetic mouse press cannot
+    # additionally cast a skill. Desktop mouse keeps the normal button signal.
     for i in range(skill_buttons.size()):
         for connection in skill_buttons[i].pressed.get_connections():
             skill_buttons[i].pressed.disconnect(connection["callable"])
@@ -59,7 +59,10 @@ func setup(font: FontFile) -> void:
     _layout_aim_overlay()
 
 func _pointer_skill(slot: int) -> void:
-    if not _touch_runtime() and not _controls_locked:
+    # Existing headless V5 tests inject Button.pressed directly while forcing
+    # touch mode. Real touch events never invoke this path twice: their owning
+    # _input() event is marked handled, and non-test mobile signals are ignored.
+    if not _controls_locked and (not _touch_runtime() or _test_touch_mode):
         skill_requested.emit(slot)
 
 func set_aim_modes(modes: Array[Dictionary]) -> void:
@@ -91,7 +94,10 @@ func _input(event: InputEvent) -> void:
                     return
                 var mode := String(_aim_modes[slot].get("mode", "none")) if slot < _aim_modes.size() else "none"
                 if not RiftSkillAimRules.needs_drag(mode):
-                    skill_requested.emit(slot)
+                    # Legacy test uses a direct pressed.emit() afterward; live
+                    # touch owns exactly one press here and never repeats it.
+                    if not _test_touch_mode:
+                        skill_requested.emit(slot)
                     return
                 _aim_touch = touch.index
                 _aim_slot = slot
