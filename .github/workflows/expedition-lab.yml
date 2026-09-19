@@ -1,0 +1,38 @@
+name: Independent Expedition Lab
+on:
+  workflow_dispatch:
+  push:
+    branches: ['experiment/gpt6-riftforged-independent']
+    paths: ['godot_experiment/**', '.github/workflows/expedition-lab.yml']
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.7.2
+          use-dotnet: false
+          include-templates: true
+      - run: python3 -m pip install fonttools==4.61.1
+      - run: python3 godot_experiment/tools/prepare_font.py --project godot_experiment
+      - run: python3 godot_experiment/tools/subset_font.py
+      - run: godot --headless --path godot_experiment --import --quit
+      - run: python3 godot_experiment/tools/verify.py --godot godot
+      - name: Export isolated Web artifact
+        run: |
+          mkdir -p godot_experiment/web
+          godot --headless --path godot_experiment --export-release Web "$PWD/godot_experiment/web/index.html"
+          python3 godot_experiment/tools/package_web.py godot_experiment/web
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: expedition-lab-validation
+          path: godot_experiment/reports/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: expedition-lab-web
+          path: godot_experiment/web/
+# Deliberately has no Pages deployment, merge or write permission.
