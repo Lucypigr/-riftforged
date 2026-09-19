@@ -50,9 +50,9 @@ func _use_skill(slot: int) -> void:
     if slot < 0 or slot >= actions.size():
         return
     var action: Dictionary = actions[slot]
-    if action.is_empty():
-        # A blank circle is an actionable configuration shortcut, not a dead
-        # grey button. Use the existing editor, not another inventory system.
+    # Existing hotbar renders an empty assignment as a nonempty Dictionary
+    # with kind="empty"; Dictionary.is_empty() alone misses that placeholder.
+    if action.is_empty() or String(action.get("kind", "")) == "empty":
         _open_armor_ui()
         _show_hotbar_page(true)
         ui.set_hint("選擇普攻或已裝備的主動寶石，再選擇快捷欄 %d。" % (slot + 1))
@@ -62,8 +62,8 @@ func _use_skill(slot: int) -> void:
         return
     if player == null or _camp_root == null:
         return
-    # Safe practice, including the large default basic attack: show a real
-    # response to a touch release but do not change mana, HP, enemies or loot.
+    # Safe practice, including large default basic attack: a visible effect
+    # with no mana, HP, enemy, loot or inventory change.
     var is_basic := String(action.get("kind", "")) == "basic"
     var gem: Dictionary = action.get("gem", {})
     var direction: Vector3 = _aim_direction if _aim_override else last_aim_direction
