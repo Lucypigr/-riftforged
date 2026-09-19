@@ -1,9 +1,10 @@
 extends "res://scripts/app_v4.gd"
 
-# Player-selectable combinations; these are recommendations, not fixed classes.
-# Added Fire Damage Support requires a compatible physical-damage skill in POE;
-# the existing fireball is a pure fire spell, so Inspiration is the valid red
-# replacement instead of falsely enabling an incompatible support.
+const V4GemUI = preload("res://scripts/v4_gem_ui.gd")
+
+# Player-selectable combinations, never forced equipment classes. Added Fire
+# does not match this fireball's spell tags; Inspiration replaces it rather
+# than silently forcing an incompatible support to activate.
 const V4_BUILDS := {
     "弓箭清圖流": ["split_arrow", "pierce_support", "faster_attacks_support"],
     "近戰範圍流": ["cleave", "melee_physical_support", "increased_area_support"],
@@ -12,9 +13,27 @@ const V4_BUILDS := {
     "閃電連鎖流": ["arc", "faster_casting_support", "controlled_destruction_support"],
 }
 
+func _ready() -> void:
+    super._ready()
+    if gem_ui == null or ui_font == null:
+        return
+    var old_ui := gem_ui
+    remove_child(old_ui)
+    old_ui.queue_free()
+    gem_ui = V4GemUI.new() as RiftLinkedGemUI
+    gem_ui.name = "LinkedGemInventory"
+    add_child(gem_ui)
+    gem_ui.setup(ui_font)
+    gem_ui.gem_requested.connect(_select_gem)
+    gem_ui.socket_requested.connect(_use_socket)
+    gem_ui.currency_requested.connect(_use_currency)
+    gem_ui.aura_requested.connect(_toggle_aura)
+    (gem_ui as RiftV4GemUI).set_action_interval(Callable(self, "_action_seconds"))
+    _refresh_gem_ui()
+
 func _spawn_loot_visual(position: Vector3, item: Dictionary) -> void:
-    # Determine sockets/links ONCE at monster death, before a floor instance
-    # exists; pickup must not reroll or create a new physical item identity.
+    # Determine sockets and links at monster death: picking an item up must
+    # not reroll its physical properties or replace its UID.
     var prepared := item.duplicate(true)
     var slot := String(prepared.get("slot", ""))
     if slot == "武器":
