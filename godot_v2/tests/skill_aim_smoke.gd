@@ -67,7 +67,7 @@ func _run() -> void:
     hud.set_desktop_mode(false)
     hud._layout_mobile_portrait(Vector2(390, 844))
     game._refresh_gameplay_ui()
-    var entries := game._hotbar_entries()
+    var entries: Array = game._hotbar_entries()
     if not _check(String((entries[0] as Dictionary).get("gem", {}).get("id", "")) == "ember_bolt", "starter fireball not on first slot"):
         return
     var move_point := hud.joystick_center + Vector2(20, 0)
@@ -84,7 +84,7 @@ func _run() -> void:
     if not _check(hud.debug_aim()["guide"] and hud.joystick_touch_id == 2, "drag lost guide or stole joystick"):
         return
     hud._input(_touch(7, false, action + Vector2(76, 0)))
-    var state := game.debug_skill_aim()
+    var state: Dictionary = game.debug_skill_aim()
     var shots: Array = state["shots"]
     if not _check(int(state["releases"]) == 1 and shots.size() > before_shots and float(game.player_mana) < before_mana and not hud.debug_aim()["guide"], "release did not cast exactly once and clear indicator"):
         return
