@@ -57,6 +57,9 @@ jobs:
       - name: Headless linked-gem interaction smoke test
         run: godot --headless --path godot_v2 --script res://tests/gem_smoke.gd
 
+      - name: Headless V3 gem registry, combat and ground-drop regression
+        run: godot --headless --path godot_v2 --script res://tests/v3_gem_smoke.gd
+
       - name: Headless ARPG HUD smoke test
         run: godot --headless --path godot_v2 --script res://tests/hud_smoke.gd
 
