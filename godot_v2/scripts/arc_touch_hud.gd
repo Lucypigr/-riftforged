@@ -65,6 +65,21 @@ func _circle_style(background: Color, edge: Color, diameter: float) -> StyleBoxF
     style.set_content_margin_all(0.0)
     return style
 
+func _layout_aim_overlay() -> void:
+    super._layout_aim_overlay()
+    if _aim_cancel == null or skill_buttons.size() < 4:
+        return
+    if not (_mobile_landscape() or _test_touch_mode):
+        return
+    # Centered cancel used to overlap the upper skill's ordinary upward drag:
+    # an actual released fireball was silently cancelled. Keep the red cancel
+    # target to the LEFT of the entire arc, with a positive separation gap.
+    var leftmost := skill_buttons[0].get_global_rect().position.x
+    for i in range(1, 4):
+        leftmost = minf(leftmost, skill_buttons[i].get_global_rect().position.x)
+    var view_width := get_viewport().get_visible_rect().size.x
+    _aim_cancel.position.x = clampf(leftmost - _aim_cancel.size.x - 24.0, 12.0, maxf(12.0, view_width - _aim_cancel.size.x - 12.0))
+
 func _paint_circles() -> void:
     if not (_mobile_landscape() or not desktop_mode or _test_touch_mode) or skill_buttons.size() < 5 or attack_button == null:
         return
@@ -89,6 +104,9 @@ func _paint_circles() -> void:
     attack_button.add_theme_stylebox_override("normal", _circle_style(Color(0.08, 0.18, 0.35, 0.98), Color(0.57, 0.84, 1.0), attack_button.size.x))
     attack_button.add_theme_stylebox_override("pressed", _circle_style(Color(0.19, 0.42, 0.65), Color(0.91, 0.99, 1.0), attack_button.size.x))
     attack_button.add_theme_stylebox_override("disabled", _circle_style(Color(0.06, 0.075, 0.10), Color(0.28, 0.31, 0.36), attack_button.size.x))
+    if _hotbar.size() > 4 and _hotbar[4].is_empty() and not _controls_locked:
+        attack_button.disabled = false
+        attack_button.tooltip_text = "空欄：點擊配置技能"
 
 func _layout_desktop(size: Vector2) -> void:
     super._layout_desktop(size)
@@ -109,9 +127,8 @@ func _layout_desktop(size: Vector2) -> void:
         var target: Vector2 = center + (offsets[i] as Vector2) * small - Vector2.ONE * small * 0.5
         button.position = Vector2(clampf(target.x, 4.0, size.x - small - 4.0), clampf(target.y, 4.0, size.y - small - 4.0))
         button.show()
-    # The inherited V5 regression inspects all five mini-button geometries.
-    # Slot five's mini representation must remain HIDDEN and safely parked;
-    # the user interacts only with its large circle on mobile.
+    # Slot five's mini representation remains hidden and parked; the user
+    # interacts with its configurable large circle, not duplicate controls.
     skill_buttons[4].position = Vector2(size.x * 0.48, 4.0)
     skill_buttons[4].hide()
     mana_orb.position.x = size.x * 0.59
