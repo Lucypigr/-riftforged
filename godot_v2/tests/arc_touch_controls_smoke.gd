@@ -83,11 +83,17 @@ func _run() -> void:
     hud._input(_touch(7, true, first))
     if not _check(hud.debug_aim()["touch_id"] == 7 and hud.debug_aim()["guide"] and game.move_input.y < -0.9, "second thumb cannot begin directional aim"):
         return
-    hud._input(_drag(7, first + Vector2(75, -12)))
-    hud._input(_touch(7, false, first + Vector2(75, -12)))
+    var camp_release := first + Vector2(75, -12)
+    if hud._aim_cancel.get_global_rect().has_point(camp_release):
+        camp_release = first + Vector2(0, 75)
+    if not _check(not hud._aim_cancel.get_global_rect().has_point(camp_release), "safe aiming release still enters explicit cancel rectangle"):
+        return
+    print("ARC_RELEASE first=", first, " release=", camp_release, " cancel=", hud._aim_cancel.get_global_rect())
+    hud._input(_drag(7, camp_release))
+    hud._input(_touch(7, false, camp_release))
     var camp_preview := game.get_node_or_null("SafeCamp/CampSkillPreview")
     if camp_preview == null or not is_equal_approx(game.player_mana, mana) or hud.debug_aim()["guide"]:
-        print("ARC_DEBUG preview=", camp_preview, " camp=", game.debug_camp_state()["region"], " aim=", hud.debug_aim(), " releases=", game.debug_skill_aim()["releases"], " modal=", game._inventory_open(), " mana=", game.player_mana, " before=", mana, " action=", game._hotbar_entries()[0])
+        print("ARC_DEBUG preview=", camp_preview, " camp=", game.debug_camp_state()["region"], " aim=", hud.debug_aim(), " releases=", game.debug_skill_aim()["releases"], " modal=", game._inventory_open(), " mana=", game.player_mana, " before=", mana)
         _check(false, "camp equipped skill release produced no harmless visual")
         return
     var before_preview: int = int(game._camp_root.get_child_count())
@@ -113,8 +119,8 @@ func _run() -> void:
     var earlier_mana := float(game.player_mana)
     var earlier_shots := (game.debug_skill_aim()["shots"] as Array).size()
     hud._input(_touch(10, true, first))
-    hud._input(_drag(10, first + Vector2(75, -10)))
-    hud._input(_touch(10, false, first + Vector2(75, -10)))
+    hud._input(_drag(10, first + Vector2(75, 35)))
+    hud._input(_touch(10, false, first + Vector2(75, 35)))
     if not _check(game.player_mana < earlier_mana and (game.debug_skill_aim()["shots"] as Array).size() > earlier_shots, "real first skill still cannot cast after portal"):
         return
     finished = true
