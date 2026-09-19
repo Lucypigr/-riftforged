@@ -19,4 +19,4 @@ jobs:
       - name: Clean project import
         run: godot --headless --path godot_v2 --import --quit
       - name: Full V3 registry, controlled RNG, actual death, ground pickup and 10 casts
-        run: godot --headless --path godot_v2 --script res://tests/v3_gem_smoke.gd
+        run: godot --headless --path godot_v2 --script res://tests/v3_gem_smoke.gd -- --camp01-legacy-combat
