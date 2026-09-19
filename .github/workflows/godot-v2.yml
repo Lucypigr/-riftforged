@@ -71,6 +71,9 @@ jobs:
       - name: Headless mobile landscape touch and long-press regression
         run: godot --headless --path godot_v2 --script res://tests/mobile_landscape_smoke.gd
 
+      - name: Headless V5 two-finger input and integrated gem regression
+        run: godot --headless --path godot_v2 --script res://tests/v5_smoke.gd
+
       - name: Export Web build
         run: |
           rm -rf "$GITHUB_WORKSPACE/godot-v2-web"
