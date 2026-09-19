@@ -219,7 +219,15 @@ func _get_weapon() -> Dictionary:
         if _v5_target_kind == "weapon":
             for i in range(weapon_inventory.size()):
                 if i != _equipped_weapon_index and int(weapon_inventory[i].get("instance_uid", 0)) == _v5_target_uid:
-                    return GemSystem.normalize_weapon_sockets(weapon_inventory[i], false)
+                    # Legacy inventory entries can have no socket metadata at all.
+                    # Creating randomized sockets here would mint phantom slots
+                    # when merely opening the editor or spending one jeweller.
+                    var candidate := weapon_inventory[i].duplicate(true)
+                    if not candidate.has("sockets"):
+                        candidate["sockets"] = []
+                    if not candidate.has("links"):
+                        candidate["links"] = []
+                    return candidate
         elif _v5_target_kind == "armor":
             for item in armor_inventory:
                 if int(item.get("instance_uid", 0)) == _v5_target_uid:
