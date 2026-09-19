@@ -74,11 +74,12 @@ jobs:
           # Default production entry must remain camp-first.
           godot --headless --path godot_v2 --script res://tests/camp_smoke.gd
           godot --headless --path godot_v2 --script res://tests/landscape_viewport_smoke.gd
+          godot --headless --path godot_v2 --script res://tests/touch_skill_regression.gd
           godot --headless --path godot_v2 --export-release "Web" "$GITHUB_WORKSPACE/_site/godot-v2/index.html"
           test -f _site/godot-v2/index.html
           test -n "$(find _site/godot-v2 -maxdepth 1 -name '*.wasm' -print -quit)"
           test -n "$(find _site/godot-v2 -maxdepth 1 -name '*.pck' -print -quit)"
-          # Fail the deployment if Safari's dynamic visible-height fix is absent.
+          # Fail deployment if Safari's dynamic visible-height fix is absent.
           grep -q '100dvh' _site/godot-v2/index.html
 
       - name: Setup Pages

@@ -86,6 +86,9 @@ jobs:
       - name: Headless short landscape fit and five-button visibility regression
         run: godot --headless --path godot_v2 --script res://tests/landscape_viewport_smoke.gd
 
+      - name: Headless responsive thumbstick, camp skill practice and real combat casting
+        run: godot --headless --path godot_v2 --script res://tests/touch_skill_regression.gd
+
       - name: Export Web build
         run: |
           rm -rf "$GITHUB_WORKSPACE/godot-v2-web"

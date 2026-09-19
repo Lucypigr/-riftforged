@@ -1,6 +1,32 @@
 extends "res://scripts/skill_aim_hud.gd"
 class_name RiftLandscapeFitHUD
 
+# A thumb should not need to travel to the rim to run. The movement output
+# reaches full strength after roughly 21-29 screen pixels, independently of
+# the currently scaled joystick artwork. Keep the visible knob inside its pad.
+func _update_joystick(screen_position: Vector2) -> void:
+    if joystick_back == null:
+        return
+    var delta := screen_position - joystick_center
+    var distance := delta.length()
+    var dead_zone := clampf(joystick_back.size.x * 0.035, 3.0, 5.0)
+    var full_speed_at := clampf(joystick_back.size.x * 0.24, 21.0, 29.0)
+    if distance <= dead_zone:
+        movement = Vector2.ZERO
+    else:
+        var fraction := clampf((distance - dead_zone) / (full_speed_at - dead_zone), 0.0, 1.0)
+        movement = delta.normalized() * sqrt(fraction)
+    movement_changed.emit(movement)
+    _set_knob(movement)
+
+func _set_knob(value: Vector2) -> void:
+    if joystick_knob == null or joystick_back == null:
+        return
+    var diameter := clampf(joystick_back.size.x * 0.41, 33.0, 54.0)
+    joystick_knob.size = Vector2.ONE * diameter
+    var travel := maxf(0.0, (joystick_back.size.x - diameter) * 0.5 - 2.0)
+    joystick_knob.position = (joystick_back.size - joystick_knob.size) * 0.5 + value.limit_length(1.0) * travel
+
 # The original landscape layout assumed a 720px-high desktop canvas. On iOS
 # Safari the dynamic browser toolbar can leave a much shorter visible canvas.
 # Keep four secondary skills and slot-five primary inside the CURRENT view.
