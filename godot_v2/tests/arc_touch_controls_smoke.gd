@@ -85,7 +85,10 @@ func _run() -> void:
         return
     hud._input(_drag(7, first + Vector2(75, -12)))
     hud._input(_touch(7, false, first + Vector2(75, -12)))
-    if not _check(game.get_node_or_null("SafeCamp/CampSkillPreview") != null and is_equal_approx(game.player_mana, mana) and not hud.debug_aim()["guide"], "camp equipped skill release produced no harmless visual"):
+    var camp_preview := game.get_node_or_null("SafeCamp/CampSkillPreview")
+    if camp_preview == null or not is_equal_approx(game.player_mana, mana) or hud.debug_aim()["guide"]:
+        print("ARC_DEBUG preview=", camp_preview, " camp=", game.debug_camp_state()["region"], " aim=", hud.debug_aim(), " releases=", game.debug_skill_aim()["releases"], " modal=", game._inventory_open(), " mana=", game.player_mana, " before=", mana, " action=", game._hotbar_entries()[0])
+        _check(false, "camp equipped skill release produced no harmless visual")
         return
     var before_preview: int = int(game._camp_root.get_child_count())
     var main := hud.attack_button.get_global_rect().get_center()
