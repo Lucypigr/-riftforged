@@ -47,9 +47,12 @@ func _run() -> void:
     if not bool((game.call("debug_gem_state") as Dictionary).get("ui_open", false)):
         _fail("Gem button cannot open actual inventory")
         return
-    var board := game.get_node_or_null("LinkedGemInventory/LinkedGemRoot/LinkedGemPanel/Scroll/Content/SocketBoard") as Control
+    var board := game.get_node_or_null("ArmorEquipment/ArmorRoot/ArmorPanel/LinkedGemPanel/Scroll/Content/SocketBoard") as Control
     if board == null:
-        _fail("Live socket board missing")
+        _fail("Live embedded socket board missing")
+        return
+    if not game.armor_ui.is_open() or not bool((game.call("debug_v5_state") as Dictionary).get("inventory", {}).get("gem_page", false)):
+        _fail("Gem editor is not an inner page of the existing equipment inventory")
         return
     var rendered_sockets := 0
     for child in board.get_children():
@@ -165,8 +168,7 @@ func _run() -> void:
     if not bool(aura_state.get("aura_on", false)):
         _fail("Installed blue aura cannot toggle on")
         return
-    # Refine left a stash selection active: tapping an occupied socket with a
-    # selection means replace, not extract. Clear selection before extracting.
+    # A stash selection means replacement, not extraction. Clear it first.
     game.call("_select_gem", 0)
     game.call("_use_socket", 2)
     if bool((game.call("debug_gem_state") as Dictionary).get("aura_on", true)):
@@ -174,7 +176,7 @@ func _run() -> void:
         return
 
     _finished = true
-    print("RIFTFORGED_GEM_SMOKE_OK sockets/links/tags/install/extract/currency/refine/ground-loot/aura ready")
+    print("RIFTFORGED_GEM_SMOKE_OK embedded-sockets/links/tags/install/extract/currency/refine/ground-loot/aura")
     quit(0)
 
 func _total_gems(state: Dictionary) -> int:
