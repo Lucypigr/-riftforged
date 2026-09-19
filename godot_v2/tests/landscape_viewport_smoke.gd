@@ -57,7 +57,8 @@ func _run() -> void:
             if not _check(button.visible and not area.intersects(before), "skill %d hidden or overlaps primary" % (i + 1)):
                 return
             for j in range(i + 1, 4):
-                if not _check(not area.intersects(Rect2(hud.skill_buttons[j].position, hud.skill_buttons[j].size)), "skills overlap"):
+                var other := Rect2(hud.skill_buttons[j].position, hud.skill_buttons[j].size)
+                if not _check(not area.intersects(other), "skills %d and %d overlap on %s: %s vs %s" % [i + 1, j + 1, screen, area, other]):
                     return
         if not _within(Rect2(hud.equipment_button.position, hud.equipment_button.size), bounds, "inventory"):
             return
