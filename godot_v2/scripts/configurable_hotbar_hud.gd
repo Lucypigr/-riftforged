@@ -66,21 +66,20 @@ func _render_primary() -> void:
     var gem: Dictionary = entry.get("gem", {})
     var active := not entry.is_empty()
     var name := "普攻" if basic else String(gem.get("name", "空欄"))
-    skill_buttons[4].visible = not touch
     skill_buttons[4].icon = BASIC_ICON if basic else skill_buttons[4].icon
     skill_buttons[4].text = "5\n%s" % name
     skill_buttons[4].tooltip_text = name
-    if touch:
-        attack_button.show()
-        attack_button.icon = BASIC_ICON if basic else skill_buttons[4].icon
-        attack_button.expand_icon = true
-        attack_button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-        attack_button.text = "5\n%s" % name
-        attack_button.tooltip_text = name
-        attack_button.disabled = _controls_locked or not active or skill_buttons[4].disabled
-        attack_button.modulate = skill_buttons[4].modulate
-    else:
-        attack_button.hide()
+    # Always keep both representations in sync, even while the desktop
+    # version is hidden. Rotation then cannot revive a stale attack label.
+    attack_button.icon = BASIC_ICON if basic else skill_buttons[4].icon
+    attack_button.expand_icon = true
+    attack_button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    attack_button.text = "5\n%s" % name
+    attack_button.tooltip_text = name
+    attack_button.disabled = _controls_locked or not active or skill_buttons[4].disabled
+    attack_button.modulate = skill_buttons[4].modulate
+    skill_buttons[4].visible = not touch
+    attack_button.visible = touch
 
 func debug_primary_slot() -> Dictionary:
     return {"primary_visible":attack_button.visible, "slot_five_visible":skill_buttons[4].visible, "primary_text":attack_button.text, "primary_disabled":attack_button.disabled, "primary_position":attack_button.position, "primary_size":attack_button.size}
