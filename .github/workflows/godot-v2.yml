@@ -51,7 +51,7 @@ jobs:
       - name: Import clean rebuild
         run: godot --headless --path godot_v2 --import --quit
 
-      # Obsolete multi-second skill cooldown and one-use flask assertions are
+      # Obsolete multi-second cooldown and one-use flask assertions are
       # superseded by the V4 mana and flask-charge tests.
       - name: Headless V4 combat and progression regression
         run: godot --headless --path godot_v2 --script res://tests/v4_smoke.gd
@@ -76,6 +76,9 @@ jobs:
 
       - name: Headless configurable five-slot basic attack and gem mapping regression
         run: godot --headless --path godot_v2 --script res://tests/configurable_hotbar_smoke.gd
+
+      - name: Headless V5-4 aiming, trajectory and touch-release regression
+        run: godot --headless --path godot_v2 --script res://tests/skill_aim_smoke.gd
 
       - name: Export Web build
         run: |
