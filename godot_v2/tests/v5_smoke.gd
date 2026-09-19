@@ -97,7 +97,7 @@ func _run() -> void:
     var state: Dictionary = game.call("debug_v5_state")
     if not _check(bag.is_open() and gems.is_open() and bool((state["inventory"] as Dictionary).get("gem_page", false)) and int(state["target_uid"]) == uid and String(state["target_kind"]) == "weapon", "Selected bag weapon did not open its sockets inside same inventory"):
         return
-    var stash_count := game.gem_inventory.size()
+    var stash_count: int = game.gem_inventory.size()
     var currency_before := int(game.gem_currency.get("jeweller", 0))
     game.call("_use_currency", "jeweller")
     var modified: Dictionary = (game.get("weapon_inventory") as Array)[1]
@@ -133,7 +133,7 @@ func _run() -> void:
     if not _check_layout(hud, Vector2(390, 844)):
         return
     var first_joystick := hud.joystick_center + Vector2(26.0, -8.0)
-    var fire_before := game.projectile_serial
+    var fire_before: int = int(game.projectile_serial)
     game.attack_cooldown = 0.0
     hud._input(_touch(2, true, first_joystick))
     if not _check(hud.joystick_touch_id == 2 and game.move_input.length() > 0.10, "Joystick did not own first finger and move character"):
@@ -159,7 +159,7 @@ func _run() -> void:
     game._physics_process(0.016)
     if not _check(game.projectile_serial == fire_before + 1 and not game.mouse_fire_held, "Held joystick or attack generated a second unrequested shot"):
         return
-    var mana_before := game.player_mana
+    var mana_before: float = float(game.player_mana)
     hud.skill_buttons[0].pressed.emit()
     if not _check(game.player_mana < mana_before and game.attack_cooldown <= 0.001, "Casting while moving failed or also triggered basic attack"):
         return
