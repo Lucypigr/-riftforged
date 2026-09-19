@@ -86,6 +86,11 @@ func _layout() -> void:
         gear_scroll.size.y = maxf(95.0, gear_scroll.size.y - 14.0)
         bag_scroll.position.y = gear_scroll.position.y + gear_scroll.size.y + 6.0
         bag_scroll.size.y = maxf(95.0, panel.size.y - bag_scroll.position.y - 9.0)
+        var title := panel.get_node("Title") as Label
+        title.size.x = panel.size.x - 79.0
+        var exit := panel.get_node("Close") as Button
+        exit.position = Vector2(panel.size.x - 59.0, 6.0)
+        exit.size = Vector2(51.0, 46.0)
     _tab_gear.position = Vector2(12.0, 44.0)
     _tab_gear.size = Vector2(minf(146.0, (panel.size.x - 34.0) * 0.50), 32.0)
     _tab_gems.position = Vector2(_tab_gear.position.x + _tab_gear.size.x + 7.0, 44.0)
@@ -115,6 +120,8 @@ func selected_edit_target() -> Dictionary:
     return {"kind":_selected_kind, "uid":_selected_uid, "name":String(item.get("name", "裝備"))}
 
 func _description(item: Dictionary) -> String:
+    # Preserve the original item Dictionary, including affixes and gem UIDs.
+    # Only the inspection presentation is intentionally limited to the name.
     return String(item.get("name", "裝備"))
 
 func _show_inspection(item: Dictionary, anchor: Control) -> void:
@@ -138,7 +145,8 @@ func _show_inspection(item: Dictionary, anchor: Control) -> void:
         pos.x = card.position.x - width - 8.0
     pos.x = clampf(pos.x, 8.0, maxf(8.0, screen.x - width - 8.0))
     pos.y = clampf(pos.y, 8.0, maxf(8.0, screen.y - height - 8.0))
-    _tooltip.position = pos - panel.global_position
+    # ItemInspection belongs to ArmorRoot, not ArmorPanel: global root coords.
+    _tooltip.position = pos
     _tooltip.show()
 
 func _select_item(kind: String, index: int) -> void:
