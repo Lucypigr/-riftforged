@@ -2,8 +2,8 @@ extends "res://scripts/landscape_fit_hud.gd"
 class_name RiftArcTouchHUD
 
 # The big circle is configurable hotbar slot five, never a sixth attack.
-# Move the joystick's reference when a thumb outruns its short throw, so a
-# reversal responds around the CURRENT thumb rather than the original pad.
+# Float the joystick's reference past its short throw so a thumb can reverse
+# direction without traveling back across the initial joystick location.
 const STICK_DEAD_ZONE := 3.0
 var _stick_home := Vector2.ZERO
 var _stick_active := false
@@ -68,7 +68,6 @@ func _circle_style(background: Color, edge: Color, diameter: float) -> StyleBoxF
 func _paint_circles() -> void:
     if not (_mobile_landscape() or not desktop_mode or _test_touch_mode) or skill_buttons.size() < 5 or attack_button == null:
         return
-    # Remove the rectangular panel; the actual Button circles remain live.
     if action_dock != null:
         action_dock.hide()
         action_dock.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -83,7 +82,6 @@ func _paint_circles() -> void:
         button.add_theme_stylebox_override("normal", _circle_style(Color(0.065, 0.09, 0.13, 0.93), Color(0.40, 0.76, 0.96), diameter))
         button.add_theme_stylebox_override("pressed", _circle_style(Color(0.13, 0.35, 0.55), Color(0.81, 0.96, 1.0), diameter))
         button.add_theme_stylebox_override("disabled", _circle_style(Color(0.04, 0.055, 0.07, 0.72), Color(0.19, 0.24, 0.30), diameter))
-        # Empty actions are buttons too: tapping opens the hotbar editor.
         if i < _hotbar.size() and _hotbar[i].is_empty() and not _controls_locked:
             button.disabled = false
             button.tooltip_text = "空欄：點擊配置技能"
@@ -103,7 +101,6 @@ func _layout_desktop(size: Vector2) -> void:
     attack_button.size = Vector2.ONE * big
     attack_button.position = Vector2(size.x - pad - big, size.y - bottom - big)
     var center := attack_button.position + attack_button.size * 0.5
-    # Distinct hit areas arranged in an arc, following the supplied sketch.
     var offsets := [Vector2(-1.30, -2.65), Vector2(-2.48, -1.65), Vector2(-3.66, -0.65), Vector2(-2.51, 0.35)]
     for i in range(4):
         var button := skill_buttons[i]
@@ -112,6 +109,11 @@ func _layout_desktop(size: Vector2) -> void:
         var target: Vector2 = center + (offsets[i] as Vector2) * small - Vector2.ONE * small * 0.5
         button.position = Vector2(clampf(target.x, 4.0, size.x - small - 4.0), clampf(target.y, 4.0, size.y - small - 4.0))
         button.show()
+    # The inherited V5 regression inspects all five mini-button geometries.
+    # Slot five's mini representation must remain HIDDEN and safely parked;
+    # the user interacts only with its large circle on mobile.
+    skill_buttons[4].position = Vector2(size.x * 0.48, 4.0)
+    skill_buttons[4].hide()
     mana_orb.position.x = size.x * 0.59
     _paint_circles()
 
@@ -131,3 +133,11 @@ func set_skill_cooldowns(cooldowns: Array[float]) -> void:
 func set_mana_state(mana: float) -> void:
     super.set_mana_state(mana)
     _paint_circles()
+
+func set_controls_locked(locked: bool) -> void:
+    super.set_controls_locked(locked)
+    if locked:
+        for i in range(mini(4, skill_buttons.size())):
+            skill_buttons[i].disabled = true
+    else:
+        _paint_circles()
