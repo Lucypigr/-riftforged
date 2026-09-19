@@ -1,0 +1,65 @@
+extends "res://scripts/app_v4.gd"
+
+const V4GemUI = preload("res://scripts/v4_gem_ui.gd")
+
+# Player-selectable combinations, never forced equipment classes. Added Fire
+# does not match this fireball's spell tags; Inspiration replaces it rather
+# than silently forcing an incompatible support to activate.
+const V4_BUILDS := {
+    "弓箭清圖流": ["split_arrow", "pierce_support", "faster_attacks_support"],
+    "近戰範圍流": ["cleave", "melee_physical_support", "increased_area_support"],
+    "火球法師流": ["ember_bolt", "inspiration_support", "faster_casting_support"],
+    "冰霜控制流": ["frost_nova", "increased_area_support", "hypothermia_support"],
+    "閃電連鎖流": ["arc", "faster_casting_support", "controlled_destruction_support"],
+}
+
+func _ready() -> void:
+    super._ready()
+    if gem_ui == null or ui_font == null:
+        return
+    var old_ui := gem_ui
+    remove_child(old_ui)
+    old_ui.queue_free()
+    gem_ui = V4GemUI.new() as RiftLinkedGemUI
+    gem_ui.name = "LinkedGemInventory"
+    add_child(gem_ui)
+    gem_ui.setup(ui_font)
+    gem_ui.gem_requested.connect(_select_gem)
+    gem_ui.socket_requested.connect(_use_socket)
+    gem_ui.currency_requested.connect(_use_currency)
+    gem_ui.aura_requested.connect(_toggle_aura)
+    (gem_ui as RiftV4GemUI).set_action_interval(Callable(self, "_action_seconds"))
+    _refresh_gem_ui()
+
+func _spawn_loot_visual(position: Vector3, item: Dictionary) -> void:
+    # Determine sockets and links at monster death: picking an item up must
+    # not reroll its physical properties or replace its UID.
+    var prepared := item.duplicate(true)
+    var slot := String(prepared.get("slot", ""))
+    if slot == "武器":
+        prepared = GemSystem.normalize_weapon_sockets(WeaponSkillSystem.normalize_weapon(prepared), false)
+    elif not ArmorSystem.canonical_slot(slot).is_empty():
+        prepared = ArmorSystem.normalize(prepared)
+    super._spawn_loot_visual(position, prepared)
+
+func _kill_enemy(index: int) -> void:
+    if index < 0 or index >= enemies.size():
+        return
+    var entry: Dictionary = enemies[index]
+    var id := int(entry.get("id", -1))
+    var summon_owner := String((entry.get("archetype", {}) as Dictionary).get("id", "")) == "rift_oracle"
+    super._kill_enemy(index)
+    if summon_owner:
+        _remove_minions(id)
+
+func _use_skill(slot: int) -> void:
+    var entries := _hotbar_entries()
+    if slot >= 0 and slot < entries.size():
+        var gem: Dictionary = entries[slot].get("gem", {})
+        if String(gem.get("id", "")) == "arc" and _enemy_ids_in_range(10.0, 4).is_empty():
+            ui.set_hint("電弧：附近沒有目標，沒有消耗魔力")
+            return
+    super._use_skill(slot)
+
+func debug_v4_builds() -> Dictionary:
+    return V4_BUILDS.duplicate(true)
