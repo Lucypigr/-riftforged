@@ -26,8 +26,10 @@ func _layout_desktop(size: Vector2) -> void:
     var skills_y := attack_button.position.y - 2.0 * small - gap - cluster_gap
     for i in range(4):
         var button := skill_buttons[i]
+        var column := i % 2
+        var row := floori(float(i) / 2.0)
         button.size = Vector2.ONE * small
-        button.position = Vector2(skills_x + float(i % 2) * (small + gap), skills_y + float(i / 2) * (small + gap))
+        button.position = Vector2(skills_x + float(column) * (small + gap), skills_y + float(row) * (small + gap))
         button.add_theme_font_size_override("font_size", roundi(clampf(12.0 * scale, 10.0, 14.0)))
         button.show()
     action_dock.position = Vector2(skills_x - 8.0 * scale, skills_y - 8.0 * scale)
