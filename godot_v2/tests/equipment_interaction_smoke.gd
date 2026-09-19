@@ -39,8 +39,8 @@ func _run() -> void:
     await process_frame
     await process_frame
     var hud := game.get_node_or_null("MobileUI") as RiftUnifiedInventoryHUD
-    var view := game.get_node_or_null("ArmorEquipment") as RiftEquipmentInteractionUI
-    if not _check(hud != null and view != null, "Interactive inventory not installed in live scene"):
+    var view := game.get_node_or_null("ArmorEquipment") as RiftV5EquipmentUI
+    if not _check(hud != null and view != null, "V5 interactive inventory not installed in live scene"):
         return
     hud.call("_toggle_equipment_panel")
     await process_frame
@@ -65,7 +65,7 @@ func _run() -> void:
     if not _check(blade.text.is_empty() and blade.get_node_or_null("Socket_0") == null, "Zero-socket weapon card has text or ghost sockets"):
         return
     blade.pressed.emit()
-    if not _check(int(view.debug_interaction_state().get("selected_uid", 0)) == blade_uid, "Click selection did not store exact item identity"):
+    if not _check(int(view.debug_interaction_state().get("selected_uid", 0)) == blade_uid and not bool(view.debug_interaction_state().get("tooltip_visible", true)), "Tap must select exact item without showing hold-only tooltip"):
         return
     (view.bag_list.get_node("EquipSelected") as Button).pressed.emit()
     if not _check(int(game.get("_equipped_weapon_index")) == 1 and int((game.call("debug_weapon_state") as Dictionary).get("instance_uid", 0)) == blade_uid and absf(float((game.call("debug_weapon_state") as Dictionary).get("damage", 0)) - 42.0) < 0.01, "Equip button failed to swap weapon or stats"):
@@ -128,27 +128,32 @@ func _run() -> void:
     multi_card.mouse_entered.emit()
     var popup := view.root.get_node("ItemInspection") as Panel
     var label := popup.get_node("ItemInspectionText") as Label
-    if not _check(popup.visible and label.text.contains("三孔胸甲") and label.text.contains("生命 +15") and label.text.contains("UID:98765") and label.text.contains("1—2") and popup.mouse_filter == Control.MOUSE_FILTER_IGNORE and label.mouse_filter == Control.MOUSE_FILTER_IGNORE, "Hover inspector missed real item fields or intercepted input: " + label.text):
+    if not _check(popup.visible and label.text == "三孔胸甲" and popup.mouse_filter == Control.MOUSE_FILTER_IGNORE and label.mouse_filter == Control.MOUSE_FILTER_IGNORE, "V5 hover must show only the real equipment name without intercepting input: " + label.text):
         return
     multi_card.mouse_exited.emit()
-    if not _check(not popup.visible, "PC inspector remained after leaving card"):
+    if not _check(not popup.visible, "PC name tip remained after leaving card"):
         return
     for resolution in [Vector2i(390, 720), Vector2i(844, 390)]:
         root.size = resolution
         view.call("_layout")
         await process_frame
         inspect_index = _armor_index(game, "many")
-        view.call("_select_item", "armor", inspect_index)
+        grid = view.bag_list.get_node("UnifiedItemGrid") as Control
+        multi_card = grid.get_node("ArmorItem_%d" % inspect_index) as Button
+        view.call("_show_inspection", (game.get("armor_inventory") as Array)[inspect_index], multi_card)
         popup = view.root.get_node("ItemInspection") as Panel
         var box := popup.get_global_rect()
         var screen := view.get_viewport().get_visible_rect().size
-        if not _check(popup.visible and box.position.x >= 0 and box.position.y >= 0 and box.end.x <= screen.x + 0.01 and box.end.y <= screen.y + 0.01, "Inspector overflow: " + str(resolution)):
+        if not _check(popup.visible and box.position.x >= 0 and box.position.y >= 0 and box.end.x <= screen.x + 0.01 and box.end.y <= screen.y + 0.01, "Name tip overflow: " + str(resolution) + " box=" + str(box)):
             return
-        if not _check((view.gear_list.get_node("EquipmentBoard/Equipped_身體") as Button).mouse_filter != Control.MOUSE_FILTER_IGNORE and popup.mouse_filter == Control.MOUSE_FILTER_IGNORE, "Inspector blocked mobile equipment touch"):
+        if not _check((view.gear_list.get_node("EquipmentBoard/Equipped_身體") as Button).mouse_filter != Control.MOUSE_FILTER_IGNORE and popup.mouse_filter == Control.MOUSE_FILTER_IGNORE, "Name tip blocked mobile equipment touch"):
+            return
+        view.call("_select_item", "armor", inspect_index)
+        if not _check(not popup.visible, "Selecting an item displayed a hold-only name tooltip"):
             return
     view.close()
     if not _check(int(view.debug_interaction_state().get("selected_uid", -1)) == 0 and not bool(view.debug_interaction_state().get("tooltip_visible", true)), "Close left selection or popup on screen"):
         return
     _finished = true
-    print("RIFTFORGED_EQUIPMENT_INTERACTION_OK repeat/tap/drag/UID/0-1-3-sockets/hover/portrait/landscape")
+    print("RIFTFORGED_EQUIPMENT_INTERACTION_OK repeat/tap/drag/UID/0-1-3-sockets/name-only/portrait/landscape")
     quit(0)
