@@ -1,8 +1,7 @@
 extends "res://scripts/v5_hud.gd"
 class_name RiftConfigurableHotbarHUD
 
-# The large thumb button is slot 5, not a sixth, permanently assigned attack.
-# Its action travels through the same validated 1–5 dispatch as every gem.
+# The large thumb button is slot 5, not an independent sixth attack action.
 func setup(font: FontFile) -> void:
     super.setup(font)
     for connection in attack_button.pressed.get_connections():
@@ -16,7 +15,8 @@ func _primary_on_touch() -> bool:
 
 func _layout_mobile_portrait(size: Vector2) -> void:
     super._layout_mobile_portrait(size)
-    if attack_button == null or joystick_back == null:
+    # Ancestor setup lays out three buttons before adding buttons 4 and 5.
+    if attack_button == null or joystick_back == null or skill_buttons.size() < 5:
         return
     var small := clampf(size.x * 0.145, 44.0, 60.0)
     var gap := clampf(size.x * 0.018, 6.0, 9.0)
@@ -37,7 +37,12 @@ func _layout_desktop(size: Vector2) -> void:
     _render_primary()
 
 func set_hotbar_gems(gems: Array[Dictionary]) -> void:
-    super.set_hotbar_gems(gems)
+    # Older code requires a gem key even on empty slots. Hide the internal
+    # placeholder from all button enablement/mana logic.
+    var visible_entries: Array[Dictionary] = []
+    for entry in gems:
+        visible_entries.append({} if String(entry.get("kind", "")) == "empty" else entry)
+    super.set_hotbar_gems(visible_entries)
     _render_primary()
 
 func set_skill_cooldowns(cooldowns: Array[float]) -> void:
@@ -61,8 +66,6 @@ func _render_primary() -> void:
     var gem: Dictionary = entry.get("gem", {})
     var active := not entry.is_empty()
     var name := "普攻" if basic else String(gem.get("name", "空欄"))
-    # In desktop mode all five actual hotbar buttons are visible and the
-    # mouse left button remains an optional basic-attack shortcut.
     skill_buttons[4].visible = not touch
     skill_buttons[4].icon = BASIC_ICON if basic else skill_buttons[4].icon
     skill_buttons[4].text = "5\n%s" % name
