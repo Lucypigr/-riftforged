@@ -3,8 +3,7 @@ class_name RiftLandscapeFitHUD
 
 # The original landscape layout assumed a 720px-high desktop canvas. On iOS
 # Safari the dynamic browser toolbar can leave a much shorter visible canvas.
-# Keep the four secondary skills and slot-five primary in one bottom-right
-# cluster, entirely inside the CURRENT viewport rather than a cached size.
+# Keep four secondary skills and slot-five primary inside the CURRENT view.
 func _layout_desktop(size: Vector2) -> void:
     super._layout_desktop(size)
     if not (_mobile_landscape() or _test_touch_mode):
@@ -15,9 +14,12 @@ func _layout_desktop(size: Vector2) -> void:
     var safe_x := clampf(size.x * 0.025, 18.0, 32.0)
     var safe_bottom := clampf(size.y * 0.045, 18.0, 30.0)
     var bottom := size.y - safe_bottom
-    var primary := clampf(116.0 * scale, 74.0, 135.0)
-    var small := clampf(69.0 * scale, 44.0, 80.0)
-    var gap := clampf(11.0 * scale, 7.0, 13.0)
+    # Godot Buttons have an intrinsic width for their skill name + icon;
+    # assigning 44px previously produced an actual 52px Button and caused
+    # overlapping hit targets. Reserve a genuine 64px minimum in the grid.
+    var primary := clampf(116.0 * scale, 96.0, 135.0)
+    var small := clampf(69.0 * scale, 64.0, 80.0)
+    var gap := clampf(11.0 * scale, 8.0, 13.0)
     var cluster_gap := clampf(18.0 * scale, 12.0, 20.0)
     attack_button.size = Vector2.ONE * primary
     attack_button.position = Vector2(size.x - safe_x - primary, bottom - primary)
