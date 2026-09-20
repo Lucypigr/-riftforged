@@ -51,8 +51,7 @@ jobs:
       - name: Import clean rebuild
         run: godot --headless --path godot_v2 --import --quit
 
-      # Explicit headless-only fixture runs the real portal before old suites;
-      # the CAMP-01 smoke below runs without it and verifies actual camp spawn.
+      # Legacy combat suites enter the real portal using an explicit fixture.
       - name: Headless V4 combat and progression regression
         run: godot --headless --path godot_v2 --script res://tests/v4_smoke.gd -- --camp01-legacy-combat
 
@@ -88,6 +87,9 @@ jobs:
 
       - name: Headless responsive thumbstick, camp skill practice and real combat casting
         run: godot --headless --path godot_v2 --script res://tests/touch_skill_regression.gd
+
+      - name: Headless circular skill hit targets, editable slots and joystick direction reversal
+        run: godot --headless --path godot_v2 --script res://tests/arc_touch_controls_smoke.gd
 
       - name: Export Web build
         run: |
