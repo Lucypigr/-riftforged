@@ -2,12 +2,17 @@ extends "res://scripts/app_skill_aim.gd"
 
 # Independent entry point. The inherited baseline is vendored inside this
 # project; no resource crosses into godot_v2 or shares its user:// directory.
+var gem_effects: Node
 var expedition_deaths := 0
 var _respawn_shield_until := 0
 var _objective: Label
 
 func _ready() -> void:
     super._ready()
+    gem_effects = preload("res://scripts/gem_effect_runtime.gd").new()
+    gem_effects.host = self
+    gem_effects.name = "GemEffects"
+    add_child(gem_effects)
     if ui == null:
         return
     _objective = Label.new()
@@ -79,6 +84,8 @@ func _damage_player(amount: float) -> void:
     super._damage_player(amount)
     if lethal:
         expedition_deaths += 1
+        if gem_effects != null:
+            gem_effects.clear()
         _respawn_shield_until = Time.get_ticks_msec() + 2200
         _reset_v5_controls()
         (ui as RiftSkillAimHUD).cancel_aim()
@@ -115,3 +122,10 @@ func _spawn_loot_visual(position: Vector3, item: Dictionary) -> void:
         reward["suffix"] = {"name":"之守望", "stat":"護甲", "value":18}
         reward["name"] = "領主的" + String(reward.get("base_name", reward.get("name", "裝備"))) + "之守望"
     super._spawn_loot_visual(position, reward)
+
+func _cast_v3_skill(id: String, gem: Dictionary, gear: Dictionary, socket_index: int) -> void:
+    if bool(GemSystem.data(gem).get("expansion", false)):
+        gem_effects.cast(gem, gear, socket_index)
+        ui.set_hint("%s｜連線輔助 %d" % [String(gem.name), GemSystem.support_ids(gear, socket_index).size()])
+        return
+    super._cast_v3_skill(id, gem, gear, socket_index)

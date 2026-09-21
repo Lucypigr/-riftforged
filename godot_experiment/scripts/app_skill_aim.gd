@@ -62,7 +62,7 @@ func _finish_touch_aim(slot: int, drag_pixels: Vector2) -> void:
     _aim_direction = direction
     _aim_point = player.global_position + direction * minf(4.0, float(spec.get("range", 0.0)))
     if mode == "point" and drag_pixels.length_squared() > 0.0:
-        var requested := player.global_position + Vector3(drag_pixels.x, 0, drag_pixels.y) / RiftSkillAimHUD.PIXELS_PER_WORLD_UNIT
+        var requested := player.global_position + direction * drag_pixels.length() / RiftSkillAimHUD.PIXELS_PER_WORLD_UNIT
         _aim_point = AimRules.limit_point(player.global_position, requested, float(spec.get("range", 0.0)))
     if region_map != null:
         _aim_point = region_map.clamp_player(_aim_point)

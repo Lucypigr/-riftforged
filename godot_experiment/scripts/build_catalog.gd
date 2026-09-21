@@ -1,0 +1,27 @@
+extends RefCounted
+# Recipes describe compatible links; selecting one never grants items or currency.
+const RECIPES := {
+    "弓箭清圖": ["split_arrow", "pierce_support", "faster_attacks_support"],
+    "近戰範圍": ["cleave", "melee_physical_support", "increased_area_support"],
+    "節魔火球": ["ember_bolt", "inspiration_support", "faster_casting_support"],
+    "冰霜控制": ["frost_nova", "increased_area_support", "hypothermia_support"],
+    "閃電連鎖": ["arc", "faster_casting_support", "controlled_destruction_support"],
+    "移動旋風": ["cyclone", "melee_physical_support", "increased_duration_support"],
+    "餘震重擊": ["earthquake", "concentrated_effect_support", "brutality_support"],
+    "裂岩推進": ["sunder", "increased_area_support", "inspiration_support"],
+    "穿透靈刃": ["spectral_throw", "pierce_support", "vicious_projectiles_support"],
+    "多箭連鎖": ["barrage", "chain", "volley_support"],
+    "旋風箭海": ["tornado_shot", "multishot", "increased_area_support"],
+    "腐蝕地面": ["caustic_arrow", "swift_affliction_support", "increased_duration_support"],
+    "箭雨覆蓋": ["rain_of_arrows", "area_economy_support", "faster_attacks_support"],
+    "熾焰封鎖": ["firestorm", "increased_duration_support", "elemental_power_support"],
+    "蓄焰爆發": ["flameblast", "concentrated_effect_support", "controlled_destruction_support"],
+    "雷球推進": ["ball_lightning", "increased_area_support", "increased_duration_support"],
+    "電花餘響": ["spark", "echo_support", "volley_support"],
+    "護身飛刃": ["blade_vortex", "brutality_support", "increased_duration_support"],
+    "灼熱射線": ["scorching_ray", "elemental_power_support", "mana_efficiency_support"],
+    "多重圖騰": ["flame_totem", "multiple_totems_support", "increased_duration_support"],
+    "衛士遠征": ["summon_sentinel", "minion_damage_support", "increased_duration_support"],
+    "寒霜禁區": ["cold_snap", "hypothermia_support", "increased_duration_support"],
+    "雙刃橫掃": ["lacerate", "melee_physical_support", "area_economy_support"],
+}

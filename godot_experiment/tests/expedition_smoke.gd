@@ -47,7 +47,7 @@ func _run() -> void:
     root.add_child(game)
     await process_frame
     await process_frame
-    check(Gems.GEMS.size() == 27, "gem catalog lost IDs")
+    check(Gems.GEMS.size() == 57, "gem catalog lost IDs")
     for value in game.gem_currency.values():
         check(int(value) == 0, "currency minted at spawn")
     var spawn: Vector3 = game.player.position

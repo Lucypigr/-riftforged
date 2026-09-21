@@ -211,7 +211,7 @@ func _skill_damage_for(id: String) -> float:
 
 func _cast_socket_burst(index: int) -> void:
     var damage := GemSystem.skill_damage(_casting_equipment, index) * (0.85 if _aura_enabled else 1.0)
-    var targets := _enemy_ids_in_range(4.2, 99)
+    var targets := _enemy_ids_in_range(GemSystem.skill_radius(_casting_equipment, index, 4.2), 99)
     _spawn_hit_flash(player.global_position + Vector3(0, 0.7, 0), Color(1.0, 0.27, 0.10), 5.2)
     for target_id in targets:
         var enemy_index := _enemy_index_by_id(target_id)

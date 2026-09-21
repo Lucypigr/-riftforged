@@ -2,7 +2,7 @@
 import argparse,json,pathlib,subprocess,sys
 p=argparse.ArgumentParser();p.add_argument('--godot',default='godot');a=p.parse_args()
 root=pathlib.Path(__file__).resolve().parents[1];out=root/'reports';out.mkdir(exist_ok=True)
-tests=['v4_smoke','v4_integrity_smoke','gem_smoke','unified_inventory_smoke','equipment_interaction_smoke','mobile_landscape_smoke','v5_smoke','configurable_hotbar_smoke','skill_aim_smoke','expedition_smoke']
+tests=['v4_smoke','v4_integrity_smoke','gem_smoke','unified_inventory_smoke','equipment_interaction_smoke','mobile_landscape_smoke','v5_smoke','configurable_hotbar_smoke','skill_aim_smoke','expedition_smoke','gem_expansion_smoke']
 results=[]
 for test in tests:
  r=subprocess.run([a.godot,'--headless','--path',str(root),'--script','res://tests/'+test+'.gd'],text=True,capture_output=True,timeout=60)

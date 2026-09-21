@@ -119,7 +119,7 @@ func _run() -> void:
     if not _check(int((game.get("flask_charges") as Array)[0]) <= 40, "boss rewards exceeded flask charge cap"):
         return
     _stage = "v3_gems"
-    if not _check(Gems.drop_pool().size() == 27, "V3 full 27-gem pool missing"):
+    if not _check(Gems.drop_pool().size() == 57, "V3 full 27-gem pool missing"):
         return
     for id in ACTIVE:
         if not _check(Gems.drop_pool().has(id), "active gem not drop eligible: " + id):

@@ -28,7 +28,7 @@ func _check(condition: bool, reason: String) -> bool:
 
 func _run() -> void:
     var pool := Gems.drop_pool()
-    if not _check(pool.size() == Gems.GEMS.size() and pool.size() == 27, "registered/drop pool must include all old seven and 20 new gems"):
+    if not _check(pool.size() == Gems.GEMS.size() and pool.size() == 57, "registered/drop pool must include all old seven and 20 new gems"):
         return
     for id in ACTIVE + SUPPORT:
         if not _check(pool.has(id) and not Gems.make_gem(id, 9001).is_empty(), "missing from registry or pool: " + id):
